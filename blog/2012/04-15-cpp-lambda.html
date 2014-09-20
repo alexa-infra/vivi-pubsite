@@ -1,0 +1,119 @@
+{% extends '_post.html' %}
+{% meta %}
+    title: "Minimalistic C++ lambda"
+    tags: [ c++ ]
+{% endmeta %}
+
+{% block post_content %}
+{% filter textile %}
+
+Some time ago my comrade asked me to help him with one C++ issue. There is the original description:
+
+_The following program calculates a product of an array. Please add missing definitions, classes, and objects, so that the program could be compiled and could return correct result. It is required to use only standard template library of C++._ 
+
+bc. int main ()
+{
+    int v[] = { 1, 2, 3, 4, 5 };
+    unsigned long m = 1;
+    std::for_each (v, v+5, var(m) = var(m) * _1);
+    std::cout << "m=" << m << std::endl;
+    return 0;
+}
+
+My first thought was 'this is a boost lambda sytax', and 'boost is an almost standard'. So it is needed only to add boost lambda library (thankful it is completly header-only library), and the following code should be added to the beginning of program:
+
+bc. #include <iostream>
+#include <algorithm>
+#include <boost/lambda/lambda.hpp>
+using namespace boost::lambda;
+
+But... this solution has been rejected with notice 'only standard templates library (STL) should be used, no boost, no c++11..'. Sadly. After several unsuccessful attempts to compact boost lambda code, I've ended up with very basic template-based metaprogramming solution (in other words - completely simple functors) to solve only this issue. Here my code:
+
+bc.. #include <iostream>
+#include <algorithm>
+
+//! Placeholder variable
+//! returns value of actor
+struct Placeholder {
+    template< typename Type >
+    Type operator()( const Type& val ) const { return val; }
+};
+//! Global defined placeholder
+//! it should be initialized before expression
+Placeholder _1;
+
+//! Single constant
+//! store constant value, and return it in action
+struct Constant {
+private:
+    int _value;
+public:
+    Constant( const int& value ) : _value( value ) {}
+    int operator()( const int& value ) const { return _value; }
+};
+
+//! Multiplication of two functors
+//!
+template< typename FirstType, typename SecondType >
+struct Prod {
+private:
+    FirstType _first;
+    SecondType _second;
+public:
+    Prod( const FirstType& first, const SecondType& second )
+        : _first( first ), _second( second ) {}
+    template< typename Type >
+    Type operator()( const Type& t ) const { return _first(t) * _second(t); }
+};
+
+//! Equals
+//!
+template< typename FirstType, typename SecondType >
+struct Eq {
+private:
+    FirstType _first;
+    SecondType _second;
+public:
+    Eq( const FirstType& first, const SecondType& second )
+        : _first( first ), _second( second ) {}
+    template< typename Type >
+    Type operator()(const Type& t) const { return _first(t) = _second(t); }
+};
+
+//! Argument
+//! 
+template<typename Type>
+struct Arg {
+private:
+    Type& _t;
+public:
+    explicit arg(Type& t) : _t(t) {}
+    template< typename ActorType >
+    Type& operator()(const ActorType&) const {
+        return _t;
+    }
+    //! x * y
+    template< typename ActorType >
+    Prod< Arg<Type>, ActorType > operator*(const ActorType& p) const {
+        return Prod< Arg<Type>, ActorType >( Arg<Type>( _t ), p );
+    }
+    //! x * 5
+    Prod< Arg<Type>, Constant > operator*( const int& p ) const {
+        return Prod<Arg<Type>, Constant >( Arg<Type>( _t ), Constant( p ) );
+    }
+    //! x = y
+    template<typename ActorType>
+    Eq< Arg<Type>, ActorType> operator=( const ActorType& p ) const {
+        return eq< arg<Type>, ActorType >( Arg<Type>( _t ), p );
+    }
+    //! x = 5
+    Eq< Arg<Type>, Constant> operator=( const int& p ) const {
+        return Eq< Arg<T>, Constant >( Arg<Type>( _t ), Constant( p ) );
+    }
+};
+typedef Arg<unsigned long> var;
+
+p. I don't have an answer from my comrade but it seems that solution is right. It is a good practice in C++ metaprogramming, and at least I have got minimalistic c++ lambda library. This code could be expanded to other math operations, and etc. I will be happy if this small library help anybody.
+
+{% endfilter %}
+{% endblock %}

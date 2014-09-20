@@ -1,0 +1,69 @@
+{% extends '_post.html' %}
+{% meta %}
+  title: "Populate fake data in django"
+  tags: [django, homebudget, python]
+{% endmeta %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static/css/pygments.css') }}">
+{% endblock %}
+
+{% block post_content %}
+Задача - нагенерить N рандомных слов, которые хоть чуть-чуть похожи на настоящие слова (то есть подобие слогов). Халява на пайтоне:
+
+{% filter sourcecode('python') %}
+>>> def gen_rand_strings(num):
+...     import random
+...     allchars = [chr(i) for i in range(97, 97+26)]
+...     vowels = ['a', 'e', 'i', 'o', 'u', 'y']
+...     consonants = [i for i in allchars if i not in vowels]
+...     ret = []
+...     for i in range(0, num):
+...         s = ''
+...         rr = random.randint(2, 6)
+...         for j in range(1, rr):
+...             s += random.choice(consonants)
+...             s += random.choice(vowels)
+...         ret.append(s)
+...     return ret
+>>> gen_rand_strings(20)
+['vydohefy', 'hete', 'comegihu', 'sarabo', 'tyde', 'ro', 
+ 'mojuletabu', 'ruridaviqy', 'my', 'tafaluhy', 'teleniwu', 
+ 'xixy', 'cyky', 'hypakelo', 'kicuba', 'jekiqovazu', 
+ 'botaveci', 'byru', 'dolizojaca']
+{% endfilter %}
+
+Зачем это понадобилось, да вот захотелось набить БД фейковыми данными :) примерно так (по проекту homebudget):
+
+{% filter sourcecode('python') %}
+>>> from homebudget.purchases import models
+>>> models.PurchaseTag.objects.count()
+0
+>>> new_tags = gen_rand_strings(20)
+>>> for tag in new_tags:
+...     ntag = models.PurchaseTag.objects.get_or_create(value=tag, 
+...         norm_value=tag, owner=usernew)
+...     ntag[0].save()
+>>> models.PurchaseTag.objects.count()
+20
+>>> from datetime import date, timedelta
+>>> last = date.today()
+>>> dt = date(year=2010,month=05,day=1)
+>>> oneday = timedelta(days=1)
+>>> while (dt < last):
+...     rr = random.randint(3, 10)
+...     for i in range(0, rr):
+...          tag = models.PurchaseTag.objects.get(
+...              value=random.choice(new_tags))
+...          price = random.randint(1, 100)
+...          purch = gen_rand_string(2)[0]
+...          p = models.Purchase(name=purch,quantity=1.,
+...              price_for_one=price,price_total=price, 
+...              purchase_date=dt, owner=usernew)
+...          p.save()
+...          p.tags.add(tag)
+...          p.save()
+...     dt += oneday
+{% endfilter %}
+База забита фейковыми покупками за полгода, к каждой покупке привязан один из 20 новых тагов. Теперь можно спокойно тестить выборки для построения статистики. Халява как она есть.
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends '_post.html' %}
+{% meta %}
+    title: "boost.python and mingw64"
+    tags: [ python, c++ ]
+{% endmeta %}
+
+{% block post_content %}
+{% filter textile %}
+
+h4. Environment
+
+# boost 1.54.0
+# mingw 48.1 x64 (mingw-x64-4.8.1-release-posix-seh-rev1) from "mingwbuilds":http://sourceforge.net/projects/mingwbuilds/files/host-windows/releases/4.8.1/64-bit/threads-posix/seh/
+# python 2.7.3 x64
+
+h4. In short:
+
+python does not define MS_WIN64 for gcc, it defines the one only for visual studio. (see python27/include/pyconfig.h:142). solution - you have to build boost.python and your modules with -DMS_WIN64 option.
+
+h4. In long way (store all commands just for reference):
+
+_note: I use GOW package, it contains some useful ported from linux programs like cp, mv, etc._
+
+make sure mingw64/bin and python27/bin is in PATH variable
+
+create static python library (if needed):
+
+{% filter sourcecode('bash') %}
+gendef.exe python27.dll
+dlltool.exe --dllname python27.dll --def python27.def --output-lib libpython27.a
+mv libpython27.a d:\devtools\python27\libs\
+{% endfilter %}
+
+build boost.python:
+
+{% filter sourcecode('bash') %}
+bootstrap.bat
+b2 toolset=gcc address-model=64 variants=debug,release link=static,shared threading=multi define=MS_WIN64 --with-python stage
+{% endfilter %}
+
+useful flags for debugging (same for bjam):
+
+{% filter sourcecode('bash') %}
+b2 -a -q --debug-configuration
+b2 -d+2
+{% endfilter %}
+
+build test embedding module
+
+{% filter sourcecode('bash') %}
+cd libs\python\examples\quickstart
+..\..\..\..\bjam.exe toolset=gcc address-model=64 define=MS_WIN64 --verbose-test test
+{% endfilter %}
+
+build sample library:
+
+{% filter sourcecode('bash') %}
+g++ -I"d:/devtools/boost_1_54_0/" -I"d:/devtools/python27/include/" -DMS_WIN64 -c wrap.cpp
+g++ -shared -o example.pyd wrap.o -L"d:/devtools/boost_1_54_0/stage/lib" -L"d:/devtools/python27/libs" -lboost_python-mgw48-mt-1_54 -lpython27
+cp d:/devtools/boost_1_54_0/stage/lib/libboost_python-mgw48-mt-1_54.dll .
+python
+>>>    from example import *
+{% endfilter %}
+
+note for static libs use -DBOOST_PYTHON_STATIC_LIB
+
+useful articles:
+# "http://www.boost.org/doc/libs/1_54_0/libs/python/doc/building.html":http://www.boost.org/doc/libs/1_54_0/libs/python/doc/building.html
+# http://sourceforge.net/apps/trac/mingw-w64/wiki/Building%20Boost
+# "http://wiki.python.org/moin/boost.python/BuildingExtensions":http://wiki.python.org/moin/boost.python/BuildingExtensions
+# "http://stackoverflow.com/questions/11182765/how-can-i-build-my-c-extensions-with-mingw-w64-in-python":http://stackoverflow.com/questions/11182765/how-can-i-build-my-c-extensions-with-mingw-w64-in-python
+# "http://stackoverflow.com/questions/2842469/python-undefined-reference-to-imp-py-initmodule4":http://stackoverflow.com/questions/2842469/python-undefined-reference-to-imp-py-initmodule4
+# "http://stackoverflow.com/questions/14090683/compile-some-code-with-boost-python-by-mingw-in-win7-64bit":http://stackoverflow.com/questions/14090683/compile-some-code-with-boost-python-by-mingw-in-win7-64bit
+
+examples (in russian):
+# "http://habrahabr.ru/post/168083/":http://habrahabr.ru/post/168083/
+# "http://habrahabr.ru/post/168233/":http://habrahabr.ru/post/168233/
+
+{% endfilter %}
+{% endblock %}

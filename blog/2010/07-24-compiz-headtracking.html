@@ -1,0 +1,68 @@
+{% extends '_post.html' %}
+{% meta %}
+  title: "compiz headtracking"
+  tags: [linux "fun"]
+{% endmeta %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static/css/pygments.css') }}">
+{% endblock %}
+
+{% block post_content %}
+{% filter textile %}
+Моя цитата из твиттера: __собрал эту игрушку, забавно и бесполезно, но кайфа - вагон! хочу большой монитор! http://www.youtube.com/watch?v=kTNG1GN4VV8__
+
+Итак вдохновившись... Теперь о том как она ставилась
+
+Хочу предупредить: у меня ubuntu 10.04, тачка домашне-девелоперская, много на ней чего стоит, так что кой-чего может и не оказаться в вашей системе. Не стоит бояться, как только проблема - сразу же внимательно читаем ошибку и ищем недостающий пакет. В общем, стоит начать с того что - обновляем систему. Главная цель - получить compiz-fusion 0.8+
+Очень бодро качаем сам headtracking плагин, и смотрим на то как он не собирается.
+=={% filter sourcecode('console') %}
+mkdir projects/headtrack
+cd projects/headtrack/
+git clone --depth 1 git://anongit.compiz-fusion.org/users/klange/headtracking
+cd headtracking/
+make
+{% endfilter %}==
+Говорит что-то про bcop, быстро находим в репозитории
+=={% filter sourcecode('console') %}
+apt-cache search compiz-fusion-bcop
+sudo apt-get install compiz-fusion-bcop
+{% endfilter %}==
+Совершенно аналогичным методом разрешаем остальные зависимости.
+=={% filter sourcecode('console') %}
+sudo apt-get install compiz-dev libcompizconfig0-dev libtool libtool highgui libhighgui-dev
+{% endfilter %}==
+Примерно где-то здесь начнется проблема с opencv. ВАЖНО: не стоит искать в репозитории libcv - хотя она там и есть, но увы не заработает, очень старая сборка, проверено. Это была моя большая ошибка, не повторяйте ее. 
+Собираем руками последнюю версию opencv из репозитория:
+=={% filter sourcecode('console') %}
+mkdir projects/opencv
+cd projects/opencv
+svn co https://opencvlibrary.svn.sourceforge.net/svnroot/opencvlibrary/tags/latest_tested_snapshot
+cd latest_tested_snapshot/opencv
+mkdir release
+cd release/
+cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local -D BUILD_PYTHON_SUPPORT=ON ..
+make
+{% endfilter %}==
+После того как вы сварили и попили чаю собралась opencv, устанавливаем ее в систему.
+=={% filter sourcecode('console') %}
+sudo make install
+sudo vim /etc/ld.so.conf.d/opencv.conf
+sudo ldconfig -v
+{% endfilter %}==
+Теперь финально билдим headtracking и устанавливаем его в систему:
+=={% filter sourcecode('console') %}
+cd projects/headtracking
+make clean
+make
+sudo make install
+{% endfilter %}==
+Теперь идем в настройки compiz-а, жмем клавишу extraz, там headtracking. Включаем его. Окошки видоизменились. Нажимаем галку - General/Webcam head track. Теперь если веб-камера включилась и изображение поплыло в какую-то сторону, то все правильно сделано. Можно наслаждаться. Если нет и камера не включилась - что-то значит у вас не по фен-шею или чего еще, типа генетики. А скорее всего тупо web-камера не совместима с video4linux, чего и советую проверять :)
+Когда у вас заболит шея (как у меня), можно поинтересоваться как это все работает. Для ленивых хинт:
+=={% filter sourcecode('console') %}
+cd projects/opencv/latest_tested_snapshot/opencv/samples/c/
+chmod +x build_all.sh
+./facedetect
+{% endfilter %}==
+{% endfilter %}
+{% endblock %}

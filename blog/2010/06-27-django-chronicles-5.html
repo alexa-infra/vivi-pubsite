@@ -1,0 +1,208 @@
+{% extends '_post.html' %}
+{% meta %}
+  title: "хроники django или homebudget part 5"
+  tags: [django, homebudget]
+{% endmeta %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static/css/pygments.css') }}">
+{% endblock %}
+
+
+{% block post_content %}
+{% filter textile %}
+
+За посленее время много чего натворил в проекте, попытаюсь все изложить.
+
+* добавил "South":http://south.aeracode.org/ к проекту для удобной работы
+* довел до ума систему тегов
+* переделал логику добавления/редактирования покупок
+* сделал красивое отображение месяца
+
+Так судя по всему, первые два пункта получились достаточно обширными, так что сегодня только про них. HTML и javascript останутся на завтра.
+
+h4. South - удобный процесс миграции БД
+
+# для начала я обновил себе django до последней дев-сборки (в репозиториях убунты все-то лежит 1.1). == {% filter sourcecode('console') %}
+sudo apt-get remove python-django
+cd ~/devtools
+svn co http://code.djangoproject.com/svn/django/trunk/ django
+cd django
+python setup.py install
+{% endfilter %}==
+# стоит проверить что django проекты не потеряли работоспособность (:
+# Устанавливаем south (для этого нужен mercurial) == {% filter sourcecode('console') %}
+cd ~/devtools
+hg clone http://bitbucket.org/andrewgodwin/south/
+cd south
+sudo python setup.py install
+{% endfilter %}==
+# Добавляем south в installed_app (в settings.py) == {% filter sourcecode('python') %}
+INSTALLED_APPS = (
+     ...
+     'south',
+)
+{% endfilter %}==
+# для параноиков - backup/restore существующей бд.
+#* Backup: == {% filter sourcecode('console') %}
+sudo -u databaseuser pg_dump homebudget > dump_db
+{% endfilter %} ==
+#* Restore: == {% filter sourcecode('console') %}
+sudo -u postres psql homebudget2 < dump_db
+{% endfilter %} ==
+# создаем таблицы для south в проекте (это последний раз когда мы сделали syncdb(: ) == {% filter sourcecode('console') %}
+./manage.py syncdb
+{% endfilter %} ==
+# теперь если бд пустая (т.е. таблицы для проектов не созданы), добавляем проекты в installed_apps и выполняем == {% filter sourcecode('console') %}
+./manage.py schemamigration purchases --initial
+./manage.py migrate purchases
+{% endfilter %} ==
+# если данные в ней уже были, то: 
+#* создаем начальную точку миграции == {% filter sourcecode('console') %} 
+./manage.py schemamigration purchases --initial
+{% endfilter %} ==
+#* исправляем скрипт создания (комментим все строки с созданием таблиц) == {% filter sourcecode('console') %}
+purchases/migration/0001_initial.py
+{% endfilter %} ==
+#* накатываем "псевдо" изменения == {% filter sourcecode('console') %}
+./manage.py migrate purchases
+{% endfilter %} ==
+#* теперь закоменченные строки можна убрать - для истории
+# основной сценарий работы c South
+## делаем изменения в модели
+## создаем автоматическую точку миграции == {% filter sourcecode('console') %} 
+./manage.py schemamigration purchases --auto
+{% endfilter %} ==
+## проверяем сгенеренный код в purchases/migration/XXXX_randomname.py
+## если что-то не так - правим код в методах backward и forward
+## в объекте orm находится замечательная django orm :) == {% filter sourcecode('python') %}
+allpurchases = orm.Purchase.objects.all()
+{% endfilter %} ==
+## накатывание изменений на БД == {% filter sourcecode('console') %}
+./manage.py migrate purchases
+{% endfilter %} ==
+## посмотреть все миграции (звездочками помечены те которые успешно прошли) == {% filter sourcecode('console') %}
+./manage.py migrate purchases --list
+{% endfilter %} ==
+## если хочется смигрировать только данные == {% filter sourcecode('console') %}
+./manage.py datamigration purchases my_super_migration_of_data
+{% endfilter %} ==
+## или можно даже вот так == {% filter sourcecode('console') %}
+./manage.py schemamigration purchases --empty my_super_migration_of_data
+{% endfilter %} ==
+
+h4. Таги
+
+# как уже упоминалось ранее таги были добавлены самопальные. Работают примерно так - в модели Purchase есть поле ManyToMany к модели Tag. Дефолтная реализация ManyToMany откидывается. В форму насильно добавляется новое CharField, переопределяются методы загрузки и сохранения формы, в которых как раз идут операции с полем m2m и CharField. Все делается в ручную. Это не никак не нравилось, так как чтобы переиспользовать эти таги пришлось бы прибегать к copy-paste, что не есть хорошо. В общем решил продолжить поиски компонент:
+#* "django-tagging":http://code.google.com/p/django-tagging/ - жутко наворочанный пакет, вроде бы есть все что нужно, все очень кастомно. но того как оно сделано я вряд ли скоро пойму. много-много черной магии для выполнения простых операций. много, очень много sql-я (без orm-а). Сразу же был откинут.
+#* "django-taggit":http://github.com/alex/django-taggit проект поменьше чем предыдущий. но черная магия опять таки присутствует. в некоторых моментах я тупо не разобрался.
+#* "tagsfield":http://softwaremaniacs.org/soft/tagsfield/ от Ивана Сагалаева. Вот оно то что нужно. Идея проста - наследуемся от ManyToManyField и заменяем дефолтный widget на собственный. Кода ну очень мало, все предельно понятно. Выбрал я его. Конечно же понадобились изменения.
+# первым делом копируем к себе tagsfield, добавляем его в installed_apps
+# изначально проект работает так: в html записывается список всех тагов и список всех тагов объекта, через javascript все это управляется - юзер может добавлять и убирать теги обекта, может добавлять новые. Когда форма сабмитится список активных тагов сохраняется в поле m2m.
+# для моего подхода (__de.li.cious style__ таги) было сделано следующее
+# поле MultipleHiddenInput было заменено на TextInput. Поясняю - при сабмите приходил список значений hidden-input-ов, а мне нужно только одно text-input поле. =={% filter sourcecode('python') %}
+class TagsFormField(forms.Field):
+    text_widget = forms.TextInput
+{% endfilter %}==
+# собственно загрузка списка тагов (метод render): =={% filter sourcecode('python') %}
+'value_tags': " ".join(value_tags)
+{% endfilter %}==
+# из модели убрал поле created и переименовал модель в BaseTag (зачем - ниже) =={% filter sourcecode('python') %}
+class BaseTag(models.Model):
+    value = models.CharField(max_length=50)
+    norm_value = models.CharField(max_length=50, editable=False)
+{% endfilter %}==
+# сохранение: =={% filter sourcecode('python') %}
+def save_form_data(self, instance, data):
+    splitted = data.strip().split(' ')
+    tags = [self._get_tag(value) for value in splitted]
+    setattr(instance, self.attname, tags)
+{% endfilter %}==
+# шаблон виджета: =={% filter sourcecode('django') %}
+{% raw %}
+<div id="{{ id }}" class="tagsfield">
+<input type="text" name="{{ name }}" value="{{ value_tags }}" />
+</div>
+{% endraw %}
+{% endfilter %}==
+# удалил больше не нужные файлы и зачистил js и css файлы. Еще были изменения, но все незначительные, так что лучше их смотреть в репозитории.
+# теперь об одном ограничении оригинального кода - все таги хранятся в одной таблице. То есть если навешать таги на два класса - таги у них будут общие. Плохо. Для решения использовал еще один уровень абстракции, в приложении Purchases создал новый класс PurchaseTag который является наследником BaseTag. Теперь в бд будет две таблицы - одна для BaseTag из приложения TagField и одна для PurchaseTag из приложения Purchase. Таги для них не пересекаются :) Ну и собственно TagField одинаково хорошо работает для PurchaseTag класса. Тем более в последствии можно кастомизировать PurchaseTag и добавить к нему дополнительные поля. В файле purchases/models.py (старый класс Tag уже затерт) =={% filter sourcecode('python') %}
+from homebudget.tagsfield import fields
+from homebudget.tagsfield.models import BaseTag
+class Purchase(models.Model):
+    ... 
+    tags = fields.TagsField('PurchaseTag')
+class PurchaseTag(BaseTag):
+    pass
+class PurchaseItemForm(ModelForm):
+    class Meta:
+        model = Purchase
+        exclude = ('purchase_date',)
+{% endfilter %}==
+# Ну и в коде везде где обращались к Tag теперь обращаемся к PurchaseTag, ну и из мелочи - поле name изменилось на value.
+# Как проходила миграция данных (замена старых тагов на новые). У меня база уже забита. Собственно для этого и прикручивался South (см. выше)
+# Сначала была таблица для приложения TagField (чтобы не было никаких проблем)
+# Потом было добавлена модель PurchaseTag в проект Purchases, в модель Purchase было добавлено поле ntags = fields.TagsField('PurchaseTag'), старое поле tags = models.ManyToManyField('Tag') не удаляя.
+# Первая попытка миграции. Не работает (!!) и South отправляет на страницы "http://south.aeracode.org/wiki/MyFieldsDontWork":http://south.aeracode.org/wiki/MyFieldsDontWork "http://south.aeracode.org/docs/customfields.html#extending-introspection":http://south.aeracode.org/docs/customfields.html#extending-introspection. Типа дописывайте сами себе правила на собственные поля. Ну ведь использовано поле отнаследованное от m2m, значит и вести оно должно себя также.. Значит спиздим определение ManyToManyField из кода south-а. Поставим это прямо возле определения TagsField-а. =={% filter sourcecode('python') %}
+rules = [
+(
+    (TagsField,),
+    [],
+    {
+        "to": ["rel.to", {}],
+        "symmetrical": ["rel.symmetrical", {"default": True}],
+        "related_name": ["rel.related_name", {"default": None}],
+        "db_table": ["db_table", {"default": None}],
+        "through": ["rel.through", {"ignore_if_auto_through": True}],
+    },
+),
+]
+from south.modelsinspector import add_introspection_rules
+add_introspection_rules(rules, ["^homebudget\.tagsfield\."])
+{% endfilter %}==
+# Теперь создание точки миграции должно пройти успешно. Теперь у нас есть два поля тагов в модели. Делаем миграцию данных. Для каждого старого тега добавляем новый, и повторяем все соотношения. В общем выглядит это так: =={% filter sourcecode('python') %}
+class Migration(DataMigration):
+    def forwards(self, orm):
+        plist = orm.Purchase.objects.all()
+        for p in plist:
+            old_tags = p.tags.all()
+            for i in old_tags:
+                norm_value = i.name.lower()
+                tag, created = orm.PurchaseTag.objects.get_or_create(
+                    norm_value = norm_value,
+                    defaults = {'value': i.name}
+                )
+                p.ntags.add(tag)
+                p.tags.remove(i)
+            p.save()
+        old_tags = orm.Tag.objects.all()
+        for i in old_tags:
+            i.delete()
+    def backwards(self, orm):
+        "Write your backwards methods here."
+        plist = orm.Purchase.objects.all()
+        for p in plist:
+            old_tags = p.ntags.all()
+            for i in old_tags:
+                tag, created = orm.Tag.objects.get_or_create(
+                    name = i.value,
+                )
+                p.tags.add(tag)
+                p.ntags.remove(i)
+            p.save()
+        old_tags = orm.PurchaseTag.objects.all()
+        for i in old_tags:
+            i.delete()
+{% endfilter %}==
+# Теперь удаляем модель Tag (старую) и поле tags. Апдейтим базу через South.
+# Все хорошо, только поле называется ntags... Переименовываем поле. Смотрим в скрипт сгенеренный South-ом - не порядок, он пытается удалить нашу таблицу и создать новую. Исправляем его ошибку и накатываем изменения =={% filter sourcecode('python') %}
+class Migration(SchemaMigration):
+    def forwards(self, orm):
+        db.rename_table('purchases_purchase_ntags', 'purchases_purchase_tags')
+    def backwards(self, orm):
+        db.rename_table('purchases_purchase_tags', 'purchases_purchase_ntags')
+{% endfilter %}==
+# Теперь все хорошо :)
+
+{% endfilter %}
+{% endblock %}

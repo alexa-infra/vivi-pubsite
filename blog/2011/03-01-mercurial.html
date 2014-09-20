@@ -1,0 +1,22 @@
+{% extends '_post.html' %}
+{% meta %}
+  title: "Mercurial repositories"
+  tags: [ opensource ]
+{% endmeta %}
+
+{% block post_content %}
+{% filter textile %}
+
+Настроил себе "репозиторий":https://hg.alexadotlife.com/ Крутится на Hg (ртуть, если кто забыл химию), то есть mercurial. Хлопот по настройке было не сильно много, большую часть заняла настройка ssl (чтобы сделать нормальную авторизацию для push-ей) в nginx. Практически все было сделано по официальным докам "отсюда":http://mercurial.selenic.com/wiki/HgServeNginx и "отсюда":http://mercurial.selenic.com/wiki/PublishingRepositories
+Зачем оно надо:
+# опенсурс имхо рулез
+# портфолио какое никакое
+# репозиторий доступный отовсюду
+Что сейчас есть:
+# "wikify":https://alexadotlife.com/wikify/ офлайн редактор вики формата, написан на javascript (взят за основу "creole движок на js":http://www.ivan.fomichev.name/2008/04/javascript-creole-10-wiki-markup-parser.html), запихан в удобные панельки "jquery-splitter":http://krikus.com/js/splitter/. Использую в качестве быстрого редактора мыслей: быстренько пишется список вещей (нумерованные списки или таблицы в вики), потом причесывается порядок, все готовый хтмл который воспринимают все современные rich-приложения. Письма в нем, особенно рабочие, очень удобно набирать. 
+# "pub-site":https://alexadotlife.com/pub-site/ собственно сорцы этого сайта, описание "здесь":http://alexadotlife.com/blog/2011/02/13/tech-details-about-relocation/
+
+Пока, все что запушил, но в скором времени планирую переместить, или зазеркалировать сюда свои репозитории с git-hub, launchpad, google-code. *Запушить все!*
+
+{% endfilter %}
+{% endblock %}

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="author" content="{{ entry.author }}" />
+    <meta name="keywords" lang="en" content="homepage, alexey vasilyev, c++, developer, cv" />
+    <title>{{ site.title }} {% block title %}: {{ entry.title }}{% endblock %}</title>
+    <link rel="icon" href="{{ url_for("static/icons/favicon.ico") }}"/>
+    <link href="{{ url_for("static/css/bootstrap.css") }}" rel="stylesheet">
+    <link href="{{ url_for("static/css/bootstrap-responsive.css") }}" rel="stylesheet">
+    <link href="{{ absolute_url_for("feed.atom") }}" rel="alternate" title="{{ site.title }}" type="application/atom+xml" /> 
+    <script type="text/javascript" src="{{ url_for('static/js/jquery-1.8.0.min.js')}}"></script>
+    {% block head_main %}{% endblock %}
+    {% block head %}{% endblock %}
+    <style type="text/css">
+      html { min-height: 100%; position: relative; }
+      body { margin-bottom: 60px; }
+      .footer { position: absolute; bottom: 0; width: 100%; height: 60px; text-align: center; }
+      .content-title { display: none; margin-bottom: 42px; } 
+      .content { max-width: 900px; margin: 48px auto; padding: 0 40px; }
+      .site-header { float: left; left: 0; }
+      .site-navi { float: right; right: 0; }
+      .site-navi ul { list-style: none; margin: 0; padding: 0; }
+      .site-navi ul li { display: inline; margin: 0 2px; padding: 0; }
+      {% block style_main %}{% endblock %}
+      {% block style %}{% endblock %}
+    </style>
+  </head>
+  <body>
+    <div class="content container">
+      <div class="content-title">
+        <div class="site-header">
+          <a href="{{ site.url }}">Alexey Vasilyev</a>'s Thoughts and Writings
+        </div><!--site-header-->
+        <div class="site-navi">
+          <ul>
+            <li><a href="{{ url_for('blog/') }}">Blog</a></li>
+            <li><a href="{{ url_for('about/') }}">About</a></li>
+          </ul>
+        </div><!--site-navi-->
+      </div><!--content-title-->
+      {% block content %}{% endblock %}
+    </div><!--content container-->
+    <div class="footer">
+      <div class="text-muted">
+        {% filter markdown -%}
+------------
+Copyright &copy; 2014 by Alexey Vasilyev
+
+Contact me via [mail](mailto:light.particle@yandex.com), [twitter](https://twitter.com/alexadotlife), or [github](https://github.com/alexa-infra). More info: [about](/about/).
+        {%- endfilter %}
+      </div>
+    </div><!--footer-->
+  </body>
+</html>

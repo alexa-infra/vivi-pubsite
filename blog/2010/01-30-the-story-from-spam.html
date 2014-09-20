@@ -1,0 +1,15 @@
+{% extends '_post.html' %}
+{% meta %}
+  title: "the story from spam "
+  tags: [ life, spam ]
+{% endmeta %}
+
+{% block post_content %}
+{% filter textile %}
+
+Сегодня получил письмо от одного человека. Сразу же стало понятно по содержанию что письмо является спамом с его взломанного ящика, и быстрая проверка показала что так оно и есть. Но очень такое забавное по содержанию и с экшеном, так что *enjoy this story*
+
+bq. I'm sorry for this odd request because it might get to you too urgent but it's because of the situation of things right now. I'm stuck in London,England with my family right now, we came down here for a short vacation then i was robbed, worse of it is that bags, cash and cards and my cell phone was stolen at GUN POINT, it's such a crazy experience for us, we need help flying back home, the authorities are not being 100% supportive but the good thing is we still have our passports and return tickets but currently having troubles paying off the hotel bills and also getting a cab to take us to the airport. Please i need you to loan me some money, will refund you as soon as I'm back home, i promise.
+
+{% endfilter %}
+{% endblock %}

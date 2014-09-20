@@ -1,0 +1,76 @@
+{% extends '_post.html' %}
+{% meta %}
+    title: "PIL in virtualenv on windows x64"
+    tags: [ python ]
+{% endmeta %}
+
+{% block post_content %}
+{% filter textile %}
+
+h2. in short:
+
+# need to build zlib and jpeglib by using x64 compilers from VS2012
+# edit setup.py of PIL, and set *_ROOT variables to include/lib of zlib and libjpeg
+# set VS90COMNTOOLS=%VS110COMNTOOLS%
+# build PIL by setuptools
+
+h2. in deep:
+
+h4. Initial preparations:
+
+* create new directory like d:\projects\mysite\local\thirdparty (under your virtualenv folder, presumably it is d:\projects\mysite\local)
+* add subfolders 'include' and 'lib' to that folder (d:\projects\mysite\local\thirdparty\include and d:\projects\mysite\local\thirdparty\lib)
+
+h4. Build zlib:
+
+* go to http://www.zlib.net/ and download latest source code (http://zlib.net/zlib127.zip)
+* unpack package source to d:\temp\zlib-1.2.7
+* run cmake-gui tool, set 'where is the sources' to d:\temp\zlib-1.2.7 folder; set 'where is the binaries' to d:\temp\zlib-1.2.7\_build folder
+* click Configure - create new folder - yes. then choose 'Visual Studio 11 Win64' from list.
+* after configuration is over, click Generate
+* open d:\temp\zlib-1.2.7\_build\zlib.sln solution by visual studio;
+* make sure that Solution Platforms displays x64 platform
+* choose Release from Solution Configuration dropdown;
+* right-click on zlibstatic project, and click build
+* after build is over, copy d:\temp\zlib-1.2.7\_build\Release\zlibstatic.lib to d:\projects\mysite\local\thirdparty\lib\zlib.lib (rename is critical)
+* and copy zconf.h and zlib.h files from d:\temp\zlib-1.2.7\ to d:\projects\mysite\local\thirdparty\include\
+
+h4. Build libjpeg
+
+* go to http://www.ijg.org/ and download latest source code (http://www.ijg.org/files/jpegsr9.zip)
+* unpack package source to d:\temp\jpeg-9
+* run cmd, and goto jpeg folder (prev created)
+* execute "%VS110COMNTOOLS%\vsvars32.bat" command line (it will setup VS environment) - quotes around command are must.
+* execute nmake /f makefile.vs setup-v10
+* it will create d:\temp\jpeg-9\jpeg.sln solution file. NOTE: it is a solution for VS2010. during the opening by VS2012, you will need to choose 'Upgrade project files'.
+* Select Configuration Manager.. option in Solutions Platforms dropdown
+* In configuration manager dialog select New.. on solution plaform dropdown, and select x64 platform (and copy configuration from x86).. 
+* go away from configuration manager, make sure that Solution Platforms displays x64 platform.
+* right-click jpeg project, and click build
+* after build is over, copy d:\temp\jpeg-9\x64\Release\jpeg.lib to d:\projects\mysite\local\thirdparty\lib\jpeg.lib (name is the same)
+* and copy jpeglib.h, jmorecfg.h, jerror.h, jconfig.h files from d:\temp\jpeg-9\ to d:\projects\mysite\local\thirdparty\include\
+
+h4. Build PIL
+
+* activate your virtualenv
+* execute pip install --no-install PIL
+* edit file d:\projects\mysite\local\build\PIL\setup.py
+* in beginnig of configuration paths block (JPEG_ROOT and etc), add THIRDPARTY = libinclude("d:/projects/mysite/local/thirdparty/")
+* and then set JPEG_ROOT and ZLIB_ROOT variables to THIRDPARTY (like JPEG_ROOT = THIRDPARTY)
+* execute "set VS90COMNTOOLS=%VS110COMNTOOLS%" (without quotes) in your virtualenv console
+* and then finaly execute pip install PIL
+
+If you see "JPEG support available" and "ZLIB (PNG/ZIP) support available" then everything is ok. congratulations!
+
+h4. notes:
+
+# I do not need to support tiff images, and freetype.. but I guess the same approach will work for them too.
+# I use python 2.7 x64 here (and my system is win7 64)
+# cmake version is 2.8.10
+# to build x64 libraries you will need VisualStudio professional edition (not Express)
+# if you want to build 32-bit (for 32-bit python installation) then you can use VS Express, the steps are the same (except you don't need to create x64 build targets)
+# I use VisualStudio 2012 (the same should work for 2010 and 2008 editions at least, with minor changes in steps)
+# I use static libraries here. If you want to use shared libraries, then you need to build different target in zlib, and adjust configuration of jpeglib; copy lib import files as described above; and you need to copy generated dll-files to local\Scripts folder (because it is in path variable).
+
+{% endfilter %}
+{% endblock %}

@@ -1,0 +1,242 @@
+{% extends '_post.html' %}
+{% meta %}
+  title: "хроники django или homebudget part 6"
+  tags: [django, homebudget]
+{% endmeta %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static/css/pygments.css') }}">
+{% endblock %}
+
+{% block post_content %}
+{% filter textile %}
+
+Давно не писал в хроники, а проект уже ушел далеко, так что сначала догоню версию блога до версии репозитория :) Сегодня будет html-css-javascript, делаем календарик для просмотра месяца.
+
+# Итак, у нас есть master page следующего содержания. Из отличий с предыдущим его описанием - добавил блок head, через который дочерние страницы могут добавлять скрипты и стили в html код страницы. =={% filter sourcecode('django') %}
+{% raw %}
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <link rel="stylesheet" href="content/css/main.css" />
+    <title>
+     Homebudget site: {% block title %} manage yourself {% endblock %}
+    </title>
+{% block head %}{% endblock %}
+</head>
+<body>
+<div id="content">
+{% block post_content %}
+{% endblock %}
+</div>
+</body>
+</html>
+{% endraw %}
+{% endfilter %}==
+# Еще есть убогий month view который выводит обычный список день-сумма. =={% filter sourcecode('django') %}
+{% raw %}
+{% extends "purchases/master.html" %}
+{% block title %} monthly view {% endblock %}
+{% block post_content %}
+<p>Date: {{view_date}} </p>
+{% if day_price_dict %}
+    <ul>
+        {% for key,value in day_price_dict.items|dictsort:"0" %}
+            <li>
+                {{key}} 
+                <b>{{value}}</b> 
+                <a href='/purchases/view/{{key.year}}/{{key.month}}/{{key.day}}/'>
+                 Edit 
+                 </a>
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>No purchases yet</p>
+{% endif %}
+<p>Total: <b>{{month_total}}</b></p>
+<a href='/purchases/add/'>Add</a>
+{% endblock %}
+{% endraw %}
+{% endfilter %}==
+# Я хочу отобразить календарик. Самое простое решение - тупо таблица, ряды - недели, столбцы - дни недели. Но как сказал знакомый верстальщик "деревня, таблицы - это прошлый век, нужно использовать div-ную верстку". В чем она заключается, как я понял для себя, это выделение всех элементов в блоки, и задание их относительного расположения через стили. В итоге было подсмотрено решение в одном проекте. 
+# В темплейте month-view заключаем список день-сумма в div с id-шником dashboard ==
+{% filter sourcecode('html') %}
+{% raw %}
+<div id="dashboard">
+<ul>
+...
+</ul>
+</div>
+{% endraw %}
+{% endfilter %}==
+# Создаем файлик dashboard.css в content/css, добавляем его в monthview темплейт. ==
+{% filter sourcecode('django') %}
+{% raw %}
+{% block head %}
+<link rel="stylesheet" href="content/css/dashboard.css" />
+{% endblock %}
+{% endraw %}
+{% endfilter %}==
+# Теперь все происходит в dashboard.css, сначала выставим фиксированную ширину для контейнера dashboard и уберем дефолтные стили списка с ul. ==
+{% filter sourcecode('css') %}
+#dashboard {
+    width: 900px;
+    display: inline;
+    position: relative;
+    float: left;
+}
+#dashboard ul {
+    list-style: none outside none;
+}
+{% endfilter %}==
+# Элементу списка (можно сказать элементу календаря) выставляем фиксированный размер - высоту и ширину. Размер вычисляем по формуле "ширина dashboard-а" разделить на 7, минус пара пикселей. Логика простая - в неделе 7 дней, по этому в контейнер должно помещаться не более 7 элементов. А плюс-минус пиксели, это нужно для учета бордеров элементов. А так же выставим float: left, этот магический параметр определяет с какой стороны будут располагаться соседние элементы. То есть для left следующий элемент выстроится слева от текущего. Если располагать некоторым абстрактным мышлением то можно понять к чему все это приведет. Правильно, к календарю. ==
+{% filter sourcecode('css') %}
+#dashboard li {
+    float: left;
+    position: relative;
+    width: 120px;
+    height: 120px;
+    text-align: center;
+}
+{% endfilter %}==
+# Можно посмотреть, да выглядит похоже, но не айс, так как дни не располагаются в соответствии с днями недели. Потому что в возвращаемом списке из вьюхи нет дней соседних месяцов, которые довершали недели. Не проблема добавить ;) Нужно в цикл обхода дат начинать от начала недели (не важно текущего или предыдущего месяца), ну и завершать аналогично. Дополнительно в возвращаемый словарь добавим значение что это за день: день текущего месяца, неактивного месяца, выходной, сегодня. ==
+{% filter sourcecode('python') %}
+{% raw %}
+def month_view(request, year, month):
+    """
+    List all day in month, with daily sum
+    """
+    try:
+        view_date = datetime.date(year=int(year), month=int(month), day=1)
+    except:
+        raise Http404
+    from django.db.models import Q
+    plist = Purchase.objects.filter(Q(purchase_date__year=view_date.year) & 
+        Q(purchase_date__month=view_date.month)).order_by('purchase_date')
+    y, m, d = view_date.timetuple()[:3]
+    dt_next = datetime.date(year=y+((m+1)/12), month=(m+1)%12, day=d)
+    day_price_dict = {}
+    first_calend = view_date
+    while first_calend.weekday() != 0:
+        first_calend -= datetime.timedelta(days=1)
+    dt = first_calend
+    while dt < view_date:
+        day_price_dict[dt] = (Decimal('0.0'), 'prev_month')
+        dt += datetime.timedelta(days=1)
+    month_total = Decimal('0.0')
+    while (dt < dt_next):
+        purchases_day = plist.filter(purchase_date__day=dt.day)
+        day_total = Decimal('0.0')
+        for it in purchases_day:
+            day_total += it.price_total
+        month_total += day_total
+        weekend = dt == datetime.date.today() and 'today' or dt.weekday() >= 5 
+            and 'weekend' or 'day'
+        day_price_dict[dt] = (day_total, weekend)
+        dt += datetime.timedelta(days=1)
+    last_calend = dt
+    while last_calend.weekday() != 0:
+        day_price_dict[last_calend] = (Decimal('0.0'), 'prev_month')
+        last_calend += datetime.timedelta(days=1)
+    return render_to_response('purchases/month_view.html', locals())
+{% endraw %}
+{% endfilter %}==
+# Теперь сделаем нормальное отображение дня (ячейки календаря). Для этого сначала выставим классы для элементов. sum для суммы дня, edit для линки перехода на день, date для числа календаря. Для самой ячейки нужно добавить класс дня, полученный в предыдущем пункте. ==
+{% filter sourcecode('django') %}
+{% raw %}
+<div id="dashboard">
+    <ul>
+        {% for key,value in day_price_dict.items|dictsort:"0" %}
+            <li class="{{value.1}}">
+                <span class="date">{{key.day|stringformat:"02i"}}</span>
+                {% ifnotequal value.1 'other_month' %}
+                <span class="sum">{{value.0}}</span> 
+                {% endifnotequal %}
+                <a class="edit" 
+                  href='/purchases/view/{{key.year}}/{{key.month}}/{{key.day}}/'>Edit</a>
+            </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endraw %}
+{% endfilter %}==
+# Потом обозначим для них стили отображения внутри ячейки. Выставим top-left-right-bottom, для этого понадобится position:absolute. ==
+{% filter sourcecode('css') %}
+#dashboard .date {
+    font-size: 60px;
+    position: absolute;
+    left: 10px;
+    top: 10px;
+}
+#dashboard .sum {
+    font-weight: bold;
+    bottom: 5px;
+    right: 5px;
+    position: absolute;
+    font-size: 20px;
+}
+#dashboard .edit {
+    position: absolute;
+    right: 5px;
+    top: 5px;
+}
+{% endfilter %}==
+# Теперь мы займемся дизигнерством. То есть разукрасим календарь. Так как необходимые навыки отсутствуют напрочь, и вообще мы дальтоники, то спиздим. Открыл для себе "клевый сайт":http://www.colorcombos.com/ на котором можно выбрать комбинацию сочетающихся цветов. "Мой выбор такой":http://www.colorcombos.com/color-scheme-275.html . В соотвествии этому выставим цвета для всех элементов. ==
+{% filter sourcecode('css') %}
+#dashboard li {
+    background: none repeat scroll 0 0 #D5E1DD;
+    border: 1px solid white;
+    font-color: white;
+    cursor: pointer;
+}
+#dashboard .prev_month {
+    background: none repeat scroll 0 0 #747e80;
+}
+#dashboard .weekend {
+    background: none repeat scroll 0 0 #F7F3E8;
+}
+#dashboard .today {
+    background: none repeat scroll 0 0 #F2583E;
+}
+#dashboard .hover {
+    background: none repeat scroll 0 0 #77BED2;
+}
+#dashboard .date {
+    color: white;
+}
+#dashboard .sum {
+    color: #2B3E42;
+}
+{% endfilter %}==
+# Ну и последние штрихи. При наведении на день курсора будем менять цвет ячейки. Для этого понадобится клиентский javascript. Будем использовать мега рулезную библиотеку "jQuery":http://jquery.com/ . Есть несколько способов ее подключить.
+#* Самый простой и стандартный. Скачать себе jquery, и добавить в статические ресурсы сайта. Использовать можно следующим образом (добавляем в head): ==
+{% filter sourcecode('html') %}
+<script src="content/common/js/jquery-1.4.2.js"></script>
+{% endfilter %}==
+#* Использовать гугл-апи. Способ матер и говорят для оптимизации кеширования само оно, но для себя я отметил следующий минус - для локальной разработки он тормозит сильно. Да и кол-во запросов увеличивается. В общем я от него отказался в пользу первого. Использовать можно следующим образом (добавляем в head): ==
+{% filter sourcecode('html') %}
+<script src="http://www.google.com/jsapi" type="text/javascript"></script>
+<script type="text/javascript">
+    google.load("jquery", "1.4.2");
+</script>
+{% endfilter %}==
+#* Что-нить еще, типа подключить с какого-нить хостинга.
+# Заполучив jQuery можно решить задачу с изменением цвета под курсором. ==
+{% filter sourcecode('javascript') %}
+$(document).ready(function(){
+    $('#dashboard li').bind("mouseenter", function() {
+        var pthis = $(this)
+        pthis.addClass('hover')
+    });
+    $('#dashboard li').bind("mouseleave", function() {
+        var pthis = $(this)
+        pthis.removeClass('hover')
+    });
+});
+{% endfilter %}==
+
+
+{% endfilter %}
+{% endblock %}

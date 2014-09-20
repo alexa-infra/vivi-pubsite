@@ -1,0 +1,223 @@
+{% extends '_post.html' %}
+{% meta %}
+  title: "Minimalistic cocoa application"
+  author: "Alexey Vasilyev"
+  tags: [c++, cocoa, macosx, objc]
+{% endmeta %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static/css/pygments.css') }}">
+{% endblock %}
+
+{% block post_content %}
+Some time ago I faced with problem - to write crossplatform application with GUI, but it should not contain any tool-specific resources like MSVC rc files, or xcode resources. It should build GUI in the most native way. Simplify problem: there was the following interface in existing code base, that I have to satisfy. 
+{% filter sourcecode('cpp') %}
+struct IWindow
+{
+  virtual void Create() = 0;
+  virtual void DoEvents() = 0;
+  virtual void Focus() = 0;
+  virtual void Hide() = 0;
+  virtual void Close() = 0;
+  virtual bool IsClosed() = 0;
+};
+{% endfilter %}
+And an application should be designed to use the similar pattern (it comes from windows-os application as far you can see):
+{% filter sourcecode('cpp') %}
+int main()
+{
+  IWindow* window = OSDependent::GetCurrentWindowSystem()->GetWindow();
+  windiw->Create();
+  window->Focus();
+  while (!window->IsClose())
+  {
+    window->DoEvents();
+    // some logic should be placed here
+  }
+  return 0;
+}
+
+#ifdef __OBJC__
+class MyWindow : public IWindow
+{
+public:
+  ///!< .. methods of IWindow interface
+protected:
+  NSWindow* window_;
+};
+#endif // __OBJC__
+{% endfilter %}
+
+After a lot of reading and number of tries, I made a native Cocoa window without any xcode-specific resource. Ta-da-dam!! :) The main function of this post:
+{% filter sourcecode('cpp') %}
+void MyWindow::Create()
+{
+  NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
+   
+  [NSApplication sharedApplication];
+  [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+        
+  unsigned int styles = NSResizableWindowMask | 
+    NSClosableWindowMask | 
+    NSTitledWindowMask;
+        
+  NSRect rectanle = NSMakeRect(100, 100, 640, 480);
+  window_ = [[NSWindow alloc] 
+    initWithContentRect:rectangle
+    styleMask:styles
+    backing:NSBackingStoreBuffered 
+    defer:NO];
+  [window_ setTitle:@"(none)"];
+  [window_ setReleasedWhenClosed:NO];
+  [window_ 
+    performSelectorOnMainThread:@selector(makeKeyAndOrderFront:) 
+    withObject:nil 
+    waitUntilDone:YES];
+  [NSApp activateIgnoringOtherApps:YES];
+  [NSApp finishLaunching];
+        
+  [pool release];
+}
+{% endfilter %}
+The most strange code here is setActivationPolicy code line. It allows window to be activated, receive keyboard and mouse event and more. I spent a lot of time to find it (this was my first macosx experience). 
+
+Next key of system - a message pump. Usually, it isn't necessary, because of usage [NSApp run]; functionality to make window application work. As far I understand NSApp run includes look-like code. In my case, I have to implement message cycle by myself. Here it is:
+{% filter sourcecode('cpp') %}
+void MyWindow::DoEvents()
+{
+  NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
+  NSEvent* event = [NSApp nextEventMatchingMask:NSAnyEventMask
+    untilDate:[NSDate distantPast]
+    inMode:NSDefaultRunLoopMode
+    dequeue:YES];
+  if (event) {
+    [NSApp sendEvent:event];
+    [NSApp updateWindows];
+  }
+  [pool release];
+}
+{% endfilter %}
+
+Other minor function implementation, easy to get, but might be useful:
+{% filter sourcecode('cpp') %}
+bool MyWindow::IsClosed() 
+{
+  return ![window_ isVisible];
+}
+void MyWindow::Focus()
+{
+  NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
+  [window_ makeKeyAndOrderFront:nil];
+  [pool release];
+}
+void MyWindow::Hide()
+{
+  NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
+  [window_ orderOut:nil];
+  [pool release];
+}
+void MyWindow::Close()
+{
+  [window_ close];
+}
+{% endfilter %}
+
+As for addition, we could add custom NSView to our window, here the defenition of derived view. 
+{% filter sourcecode('cpp') %}
+@interface MyView : NSView
+{
+  MyWindow* window_;
+}
+
+- (id)initWithFrame:(NSRect)rectangle;
+- (id)initWithMyWindow:(MyWindow*)window;
+- (MyWindow*)getWindow;
+@end
+
+@implementation MyView
+
+- (id)initWithFrame:(NSRect)rectangle
+{
+  self = [super initWithFrame:rectangle];
+  m_Window = 0;
+  return self;
+}
+- (id)initWithMyWindow:(MyWindow*)window
+{
+  Math::Rect wr = w->GetRectangle();
+  NSRect r = NSMakeRect(wr.x, wr.y, wr.Width, wr.Height);
+  if (self = [self initWithFrame:r])
+  {
+    window_ = window;
+  }
+  return self;
+}
+- (MyWindow*)getWindow
+{
+  return window_;
+}
+- (BOOL)acceptsFirstResponder
+{
+  return YES;
+}
+- (BOOL)becomeFirstResponder
+{
+  return YES;
+}
+- (BOOL)resignFirstResponder
+{
+  return YES;
+}
+- (BOOL)canBecomeKeyView
+{
+  return YES;
+}
+@end
+{% endfilter %}
+
+Final window create method:
+{% filter sourcecode('cpp') %}
+void MyWindow::Create()
+{
+  NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
+        
+  [NSApplication sharedApplication];
+  [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+        
+  unsigned int styles = NSResizableWindowMask | 
+    NSClosableWindowMask | 
+    NSTitledWindowMask;
+        
+  NSRect rectanle = NSMakeRect(100, 100, 640, 480);
+  window_ = [[NSWindow alloc] 
+    initWithContentRect:rectangle
+    styleMask:styles
+    backing:NSBackingStoreBuffered 
+    defer:NO];
+
+  [window_ setTitle:@"(none)"];
+        
+  [window_ setReleasedWhenClosed:NO];
+       
+  view_ = [[MyView alloc] initWithMyWindow:this];
+  [window_ setContentView:view_];
+  [window_ makeFirstResponder:view_];
+        
+  [view_ setFrame:NSMakeRect(0, 0, rectangle.Width, rectangle.Height)];
+       
+  [window_ 
+    performSelectorOnMainThread:@selector(makeKeyAndOrderFront:) 
+    withObject:nil 
+    waitUntilDone:YES];
+  [NSApp activateIgnoringOtherApps:YES];
+  [NSApp finishLaunching];
+        
+  [pool release];
+}
+{% endfilter %}
+
+That's all. Yes, this is not the most minimal cocoa application, but it is created without usage of xcode magic, and includes not-big code :) The most interesting and hard things have been found at <a href="http://cocoawithlove.com/">cocoa with love</a>.
+<br>
+P.S. Sorry for my bad english ^^
+
+{% endblock %}
