@@ -1,8 +1,4 @@
-{# -*- mode: django-html -*- #}{% meta %}
-  isdir: False
-  parent_tmpl: _empty.html
-{% endmeta %}
-
+{# -*- mode: django-html -*- #}
 {% block content -%}
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom" xmlns:thr="http://purl.org/syndication/thread/1.0">
@@ -15,7 +11,6 @@
     <name>{{ site.author }}</name>
   </author>
   <link href="{{ site.url }}" rel="alternate"></link>
-  <generator uri="http://hg.piranha.org.ua/cyrax/">cyrax</generator>
 
 {%- for post in site.posts[:5] %}
   <entry>

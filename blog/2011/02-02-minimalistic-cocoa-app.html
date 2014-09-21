@@ -1,9 +1,9 @@
 {% extends '_post.html' %}
-{% meta %}
+{% block meta %}
   title: "Minimalistic cocoa application"
   author: "Alexey Vasilyev"
   tags: [c++, cocoa, macosx, objc]
-{% endmeta %}
+{% endblock meta %}
 
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static/css/pygments.css') }}">

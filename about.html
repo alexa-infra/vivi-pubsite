@@ -1,60 +1,68 @@
 {% extends "_base.html" %}
 
-{% meta %}
+{% block meta %}
   title: "About"
-{% endmeta %}
+{% endblock meta %}
+
+{% block style_main %}
+.content-title { display: block; }
+.contacts { display: none; }
+{% endblock %}
+
 {% block content %}
 
 {% filter textile %}
-<img src="{{ url_for('static/ich_small.png') }}" alt="me" style="float: left; width: 160px; padding: 10px;" />
-Hello, I am *Alexey Vasilyev*, and this is my homepage. Here you can find general information about me, region of my interests, and my contacts. Please feel free for contact me by e-mail or any of instant messenger. By the way I'm very appreciate that you come here, and I hope that you will find what you want.
+<img src="{{ url_for('static/ich_small.png') }}" alt="me" style="float: right; width: 160px; padding: 10px;" />
 
-h3. A few lines about me
+h3. A few facts about me
 
-I was born in Chita, Russia. I graduated at Novosibirsk State University, Physics Department. I received a bachelor's degree at semiconductors physics chair. During education I've been involved in several software projects as outsource developer. It was part-job and my hobby. Unfortunately, I had to stop my scientific education and start my career as software developer. I have been working for 6 years in offshore software development company. Thanks to the large region of projects, interesting tasks and new technologies, I increased my professional skills and experience, and I went through all stages of career ladder from junior to senior programmer and team-leader.
-
-I've started with game development, continued with development of desktop applications for windows, after that moved to web projects based on asp.net, and during last years I have been spending more and more time on game development again. But I am not stuck only on gemadev, I have no fear to make web server and front-end website, or to develop script document processing, or write device driver, and much more. My golden choice is c++ and python right now, and I am still open to change development stack or try some new and unstable technology. I do not depend on particular IDE and OS (almost OS-agnostic).
- 
-Now my wife *Olga* is studying at Germany, at post-graduate program. I'm living with her. We are living in Stuttgart area, in Tuebingen city. Currently I'm working as outsource programmer at home. After one year of working at home-office (but still full-time), I would like really to work in office again. So I consider now all offers for programmer positions in Europe location (preferably in Germany). 
-
-About me and my professional doings and more or less personal activities you can read in my "blog":{{ url_for('blog/') }}. My hobbies and interests are the following now: open-sources programming (really, programming is not only work, but is a hobby), rock music (I try to do not skip live concerts around me), and not-too-long traveling (take a rest for a couple of days in another city or country).
-
+* My name is Alexey Vasilyev
+* I'm a passionate developer interested in cross platform programming, web development, graphics, realtime rendering and tons of other stuff
+* I'm 28 years old
+* I was born in Chita, Russia
+* I live in Tuebingen, Germany
+* I speak English and Russian
 
 h3. Subjects of interests
 
 <img src="{{ url_for('static/air_small.png') }}" alt="me" style="float: right; width: 320px; padding: 10px;" />
 The most interesting subjects for me are the following:
-* c++
-* python
-* javascript
-* cross platform programming
-* game development
-* opengl/gles graphics
-* web development (via django)
-* performance optimization
-* scripting
-* algorithms
+* C++, Python
+* Cross-platform programming (Windows/Unix/OSX/iOS/Android)
+* Game Development
+* Graphics and realtime rendering (via OpenGL/GLES)
+* Web Development (via Django/Flask)
+* NoSQL (via MongoDB)
+
+I always like to tackle on:
+* Performance optimization
+* Scripting
+* Algorithms
+* Program architecture and estimations
 
 List of what I do everyday now:
-* OpenGL, game engine development, c++
-* program architecture, analytics and estimations
+* C++/OpenGL, Game Engine development
+* Django/MongoDB
 
-And if I have enought free time then I want to learn everything about the next:
+And if I have free time then I like to learn about the next:
+* OpenStack
+* Cryptography internals
+* Functional Programming
 
-* cryptography internals
-* functional programming
-* artificial intelligence
-* bsd systems
+Also I have a lot of experience in next topics:
+* Windows programming
+* C++ MFC/ATL
+* .NET C#, WinForms and ASP.NET
 
 h3. Contacts
 
-* Tubingen, Germany (GMT+1)
-* e-mail: light.particle _at_ yandex.com 
-* GPG key id 86CC7B3E
+* Tuebingen, Germany (GMT+1)
+* e-mail: <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#108;&#105;&#103;&#104;&#116;&#46;&#112;&#97;&#114;&#116;&#105;&#99;&#108;&#101;&#64;&#121;&#97;&#110;&#100;&#101;&#120;&#46;&#99;&#111;&#109;">&#108;&#105;&#103;&#104;&#116;&#46;&#112;&#97;&#114;&#116;&#105;&#99;&#108;&#101;&#64;&#121;&#97;&#110;&#100;&#101;&#120;&#46;&#99;&#111;&#109;</a> 
+* GPG key id <a href="{{ url_for('/public.asc') }}">86CC7B3E</a>
 * BitMessage: BM-2cUm5nxAgvG4ZEMLx8nw9hKSkuNhh4SBZa
 * skype: inf_ra
 * "github":https://github.com/alexa-infra
-* "twitter":https://twitter.com/#!/alexadotlife
+* "twitter":https://twitter.com/alexadotlife
 * "xing":https://xing.com/profiles/Alexey_Vasilyev
 * "linkedin":https://www.linkedin.com/pub/alexey-vasilyev/1b/528/b29
 

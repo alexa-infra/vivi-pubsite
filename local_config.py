@@ -1,13 +1,12 @@
-GLOBALS = {
-        "title": "",
-        "author": ""
-}
+TITLE = "alexadotlife"
+AUTHOR = "Alexey Vasilyev"
 
 RULES = (
     (r"(?P<filepath>.*)index\.html", "\g<filepath>index.html"),
     (r"(?P<filepath>.*)(?P<year>\d{4})/(?P<month>\d{2})-(?P<day>\d{2})-(?P<filename>.*)\.html", "\g<filepath>\g<year>/\g<month>/\g<day>/\g<filename>/index.html"),
     (r"(?P<filename>.*)\.html", "\g<filename>/index.html"),
     (r"sitemap.xml", "sitemap.xml"),
+    (r"feed.atom", "feed.atom"),
 #    (r"(.*)", "\g<1>")
 )
 

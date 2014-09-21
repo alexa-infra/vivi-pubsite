@@ -1,7 +1,7 @@
 {% extends '_base.html' %}
-{% meta %}
+{% block meta %}
   title: "blog"
-{% endmeta %}
+{% endblock meta %}
 
 {% block style %}
   .content-title { display: block; }
@@ -10,7 +10,7 @@
 {% block content %}
 {% filter textile %}
 
-Subscribe to blog timeline by "RSS":{{ absolute_url_for('feed.atom') }} or by "Twitter":https://twitter.com/#!/alexadotlife
+Subscribe to blog timeline by "RSS feed":{{ absolute_url_for('feed.atom') }}
 
 <div class="postlist">
 {% set curyear = "" %}

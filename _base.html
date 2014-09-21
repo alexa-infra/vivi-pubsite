@@ -16,8 +16,8 @@
     {% block head %}{% endblock %}
     <style type="text/css">
       html { min-height: 100%; position: relative; }
-      body { margin-bottom: 60px; }
-      .footer { position: absolute; bottom: 0; width: 100%; height: 60px; text-align: center; }
+      body { margin-bottom: 65px; }
+      .footer { position: absolute; bottom: 0; width: 100%; height: 65px; text-align: center; }
       .content-title { display: none; margin-bottom: 42px; } 
       .content { max-width: 900px; margin: 48px auto; padding: 0 40px; }
       .site-header { float: left; left: 0; }
@@ -45,12 +45,11 @@
     </div><!--content container-->
     <div class="footer">
       <div class="text-muted">
-        {% filter markdown -%}
-------------
-Copyright &copy; 2014 by Alexey Vasilyev
+        Copyright &copy; 2014 by Alexey Vasilyev
 
-Contact me via [mail](mailto:light.particle@yandex.com), [twitter](https://twitter.com/alexadotlife), or [github](https://github.com/alexa-infra). More info: [about](/about/).
-        {%- endfilter %}
+        <div class="contacts">
+          Contact me via <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#108;&#105;&#103;&#104;&#116;&#46;&#112;&#97;&#114;&#116;&#105;&#99;&#108;&#101;&#64;&#121;&#97;&#110;&#100;&#101;&#120;&#46;&#99;&#111;&#109;">mail</a>, <a href="https://twitter.com/alexadotlife">twitter</a>, or <a href="https://github.com/alexa-infra">github</a>. More info: <a href="{{ url_for('/about/') }}">About</a>. (<a href="{{ absolute_url_for('feed.atom') }}">feed</a>)
+        </div><!--contacts-->
       </div>
     </div><!--footer-->
   </body>

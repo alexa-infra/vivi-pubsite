@@ -6,7 +6,9 @@ from jinja2 import FileSystemLoader, Environment
 from template.templatetags import templatetags
 from template.templatefunctions import functions
 from template.templatefilters import filters
+from template.skipblockext import SkipBlockExtension
 from urllib.parse import urlparse, urljoin
+import sjson
 
 ROOT_PATH = '.'
 
@@ -26,6 +28,7 @@ class Config:
                 for t in self.rules]
         self.url = getattr(local_config, 'URL', '/')
         self.title = getattr(local_config, 'TITLE', 'alexadotlife')
+        self.author = getattr(local_config, 'AUTHOR', '')
 
 class BaseEntry:
     def __init__(self, site, path, url):
@@ -74,7 +77,21 @@ class Entry(BaseEntry):
             f.write(text)
 
     def render_meta(self):
-        self.get_template().render()
+        tmpl = self.get_template()
+        if 'meta' in tmpl.blocks:
+            lines = []
+            for line in tmpl.blocks['meta'](tmpl.new_context()):
+                lines.append(line.strip())
+            text = '\n'.join(lines)
+            settings = sjson.loads(text)
+            self.settings.update(settings)
+            self.patch()
+        if 'post_content' in tmpl.blocks:
+            lines = []
+            for line in tmpl.blocks['post_content'](tmpl.new_context()):
+                lines.append(line)
+            text = '\n'.join(lines)
+            self.body = text
 
     def patch(self):
         if 'pub-date' not in self.settings:
@@ -132,14 +149,17 @@ class Site:
         self.cfg = Config()
         self.url = self.cfg.url
         self.title = self.cfg.title
+        self.author = self.cfg.author
         self.loader = FileSystemLoader(ROOT_PATH)
         self.env = Environment(loader=self.loader)
         for ttag in templatetags:
             self.env.add_extension(ttag)
+        self.env.add_extension(SkipBlockExtension)
         for tfunc in functions:
             self.env.globals[tfunc.__name__] = tfunc
         for tfilter in filters:
             self.env.filters[tfilter.__name__] = tfilter
+
         self.env.globals['site'] = self
         self.entries = []
         self.url_lookup = {}
@@ -184,18 +204,23 @@ class Site:
             entry.settings.update(url_settings)
         return entry
 
+    @property
+    def posts(self):
+        posts = [p for p in self.entries if p.path == 'blog/index.html']
+        if not posts:
+            return None
+        return posts[0].children
+
     def render_meta(self):
         for entry in self.entries:
             entry.patch()
-        self.env.globals['render_meta'] = True
         for entry in self.entries:
             print('Render meta', entry)
             entry.render_meta()
-        del self.env.globals['render_meta']
-        for entry in self.entries:
-            entry.patch()
 
     def render(self):
+        self.env.cache.clear()
+        self.env.skip_blocks.append('meta')
         for entry in self.entries:
             print('Render', entry)
             entry.render()
