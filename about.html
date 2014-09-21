@@ -6,6 +6,7 @@
 
 {% block style_main %}
 .content-title { display: block; }
+.site-header { display: none; }
 .contacts { display: none; }
 {% endblock %}
 
@@ -25,7 +26,6 @@ h3. A few facts about me
 
 h3. Subjects of interests
 
-<img src="{{ url_for('static/air_small.png') }}" alt="me" style="float: right; width: 320px; padding: 10px;" />
 The most interesting subjects for me are the following:
 * C++, Python
 * Cross-platform programming (Windows/Unix/OSX/iOS/Android)
@@ -40,6 +40,7 @@ I always like to tackle on:
 * Algorithms
 * Program architecture and estimations
 
+<img src="{{ url_for('static/air_small.png') }}" alt="me" style="float: right; width: 320px; padding: 10px;" />
 List of what I do everyday now:
 * C++/OpenGL, Game Engine development
 * Django/MongoDB
