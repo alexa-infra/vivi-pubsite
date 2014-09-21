@@ -101,6 +101,7 @@ class Entry(BaseEntry):
                 dt = date(year, month, day)
             else:
                 dt = date.today()
+            dt = datetime.combine(dt, datetime.min.time())
         else:
             dt = datetime.strptime(self.settings['pub-date'], '%Y-%m-%d')
         self.settings['date'] = dt
@@ -128,11 +129,15 @@ class Entry(BaseEntry):
 
     def get_url(self):
         url = self.url.endswith('index.html') and self.url[:-10] or self.url
+        if url == 'index.html':
+            url = ''
         absurl = urljoin(self.site.url, url)
         return urlparse(absurl).path
 
     def get_absolute_url(self):
         url = self.url.endswith('index.html') and self.url[:-10] or self.url
+        if url == 'index.html':
+            url = ''
         return urljoin(self.site.url, url)
 
 class StaticEntry(BaseEntry):

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 {%- for entry in site.entries %}
-    {% if not entry.is_static() -%}
+    {% if not entry.is_static() and not entry in site.posts -%}
     <url>
         <loc>{{ entry.get_absolute_url() }}</loc>
         {% if entry.date -%}

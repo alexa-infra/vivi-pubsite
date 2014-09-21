@@ -1,4 +1,4 @@
-TITLE = "alexadotlife"
+TITLE = "alexa.life"
 AUTHOR = "Alexey Vasilyev"
 
 RULES = (
@@ -7,6 +7,7 @@ RULES = (
     (r"(?P<filename>.*)\.html", "\g<filename>/index.html"),
     (r"sitemap.xml", "sitemap.xml"),
     (r"feed.atom", "feed.atom"),
+    (r"robots.txt", "robots.txt"),
 #    (r"(.*)", "\g<1>")
 )
 
@@ -22,4 +23,5 @@ EXCLUDE = [
         r"^requirements.txt$",
 ]
 
-URL = "http://192.168.1.68:8001/"
+#URL = "http://192.168.1.68:8001/"
+URL = "http://alexadotlife.com/"
