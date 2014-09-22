@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="author" content="" />
+    <meta name="keywords" lang="en" content="homepage, alexey vasilyev, c++, developer, cv" />
+    <title>alexa.life : хроники django или homebudget part 5</title>
+    <link rel="icon" href="/static/icons/favicon.ico"/>
+    <link href="/static/css/bootstrap.css" rel="stylesheet">
+    <link href="/static/css/bootstrap-responsive.css" rel="stylesheet">
+    <link href="http://alexadotlife.com/feed.atom" rel="alternate" title="alexa.life" type="application/atom+xml" /> 
+    <script type="text/javascript" src="/static/js/jquery-1.8.0.min.js"></script>
+    
+  <link rel="stylesheet" href="/static/css/tomorrow.css">
+  <script type="text/javascript" src="/static/js/prettify.js"></script>
+  <script type="text/javascript">
+    $(document).ready(function() {
+        $('pre, code').addClass("prettyprint");
+        $('pre code').removeClass("prettyprint");
+        prettyPrint();
+    });
+  </script>
+
+    
+<link rel="stylesheet" href="/static/css/pygments.css">
+
+    <style type="text/css">
+      html { min-height: 100%; position: relative; }
+      body { margin-bottom: 65px; }
+      .footer { position: absolute; bottom: 0; width: 100%; height: 65px; text-align: center; }
+      .content-title { display: none; margin-bottom: 42px; } 
+      .content { max-width: 900px; margin: 48px auto; padding: 0 40px; }
+      .site-header { float: left; left: 0; }
+      .site-navi { float: right; right: 0; }
+      .site-navi ul { list-style: none; margin: 0; padding: 0; }
+      .site-navi ul li { display: inline; margin: 0 2px; padding: 0; }
+      .site-navi ul li a { font-size: 18px; line-height: 27px; font-weight: bold; }
+      
+  .content-title { display: block; }
+  .post-title { margin-bottom: 25px; }
+
+      
+    </style>
+  </head>
+  <body>
+    <div class="content container">
+      <div class="content-title">
+        <div class="site-header">
+          <h3><a href="http://alexadotlife.com/">Alexey Vasilyev</a>'s Thoughts and Writings</h3>
+        </div><!--site-header-->
+        <div class="site-navi">
+          <ul>
+            <li><a href="/blog/">Blog</a></li>
+            <li><a href="/">About</a></li>
+          </ul>
+        </div><!--site-navi-->
+      </div><!--content-title-->
+      
+  <div class="post-title">
+    <h1>хроники django или homebudget part 5</h1>
+    <i>Published: 2010, June 27</i>
+  </div><!--post-title-->
+  
+	<p>За посленее время много чего натворил в проекте, попытаюсь все изложить.</p>
+
+	<ul>
+		<li>добавил <a href="http://south.aeracode.org/">South</a> к проекту для удобной работы</li>
+		<li>довел до ума систему тегов</li>
+		<li>переделал логику добавления/редактирования покупок</li>
+		<li>сделал красивое отображение месяца</li>
+	</ul>
+
+	<p>Так судя по всему, первые два пункта получились достаточно обширными, так что сегодня только про них. <span class="caps">HTML</span> и javascript останутся на завтра.</p>
+
+	<h4>South &#8211; удобный процесс миграции БД</h4>
+
+	<ol>
+		<li>для начала я обновил себе django до последней дев-сборки (в репозиториях убунты все-то лежит 1.1).  <pre class="prettyprint lang-console">
+sudo apt-get remove python-django
+cd ~/devtools
+svn co http://code.djangoproject.com/svn/django/trunk/ django
+cd django
+python setup.py install
+</pre></li>
+		<li>стоит проверить что django проекты не потеряли работоспособность (:</li>
+		<li>Устанавливаем south (для этого нужен mercurial)  <pre class="prettyprint lang-console">
+cd ~/devtools
+hg clone http://bitbucket.org/andrewgodwin/south/
+cd south
+sudo python setup.py install
+</pre></li>
+		<li>Добавляем south в installed_app (в settings.py)  <pre class="prettyprint lang-python">
+INSTALLED_APPS = (
+     ...
+     &#39;south&#39;,
+)
+</pre></li>
+		<li>для параноиков &#8211; backup/restore существующей бд.
+	<ol>
+		<li>Backup:  <pre class="prettyprint lang-console">
+sudo -u databaseuser pg_dump homebudget &gt; dump_db
+</pre> </li>
+		<li>Restore:  <pre class="prettyprint lang-console">
+sudo -u postres psql homebudget2 &lt; dump_db
+</pre> </li>
+	</ol></li>
+		<li>создаем таблицы для south в проекте (это последний раз когда мы сделали syncdb(: )  <pre class="prettyprint lang-console">
+./manage.py syncdb
+</pre> </li>
+		<li>теперь если бд пустая (т.е. таблицы для проектов не созданы), добавляем проекты в installed_apps и выполняем  <pre class="prettyprint lang-console">
+./manage.py schemamigration purchases --initial
+./manage.py migrate purchases
+</pre> </li>
+		<li>если данные в ней уже были, то:
+	<ol>
+		<li>создаем начальную точку миграции  <pre class="prettyprint lang-console"> 
+./manage.py schemamigration purchases --initial
+</pre> </li>
+		<li>исправляем скрипт создания (комментим все строки с созданием таблиц)  <pre class="prettyprint lang-console">
+purchases/migration/0001_initial.py
+</pre> </li>
+		<li>накатываем &#8220;псевдо&#8221; изменения  <pre class="prettyprint lang-console">
+./manage.py migrate purchases
+</pre> </li>
+		<li>теперь закоменченные строки можна убрать &#8211; для истории</li>
+	</ol></li>
+		<li>основной сценарий работы c South
+	<ol>
+		<li>делаем изменения в модели</li>
+		<li>создаем автоматическую точку миграции  <pre class="prettyprint lang-console"> 
+./manage.py schemamigration purchases --auto
+</pre> </li>
+		<li>проверяем сгенеренный код в purchases/migration/XXXX_randomname.py</li>
+		<li>если что-то не так &#8211; правим код в методах backward и forward</li>
+		<li>в объекте orm находится замечательная django orm :)  <pre class="prettyprint lang-python">
+allpurchases = orm.Purchase.objects.all()
+</pre> </li>
+		<li>накатывание изменений на БД  <pre class="prettyprint lang-console">
+./manage.py migrate purchases
+</pre> </li>
+		<li>посмотреть все миграции (звездочками помечены те которые успешно прошли)  <pre class="prettyprint lang-console">
+./manage.py migrate purchases --list
+</pre> </li>
+		<li>если хочется смигрировать только данные  <pre class="prettyprint lang-console">
+./manage.py datamigration purchases my_super_migration_of_data
+</pre> </li>
+		<li>или можно даже вот так  <pre class="prettyprint lang-console">
+./manage.py schemamigration purchases --empty my_super_migration_of_data
+</pre> </li>
+	</ol></li>
+	</ol>
+
+	<h4>Таги</h4>
+
+	<ol>
+		<li>как уже упоминалось ранее таги были добавлены самопальные. Работают примерно так &#8211; в модели Purchase есть поле ManyToMany к модели Tag. Дефолтная реализация ManyToMany откидывается. В форму насильно добавляется новое CharField, переопределяются методы загрузки и сохранения формы, в которых как раз идут операции с полем m2m и CharField. Все делается в ручную. Это не никак не нравилось, так как чтобы переиспользовать эти таги пришлось бы прибегать к copy-paste, что не есть хорошо. В общем решил продолжить поиски компонент:
+	<ol>
+		<li><a href="http://code.google.com/p/django-tagging/">django-tagging</a> &#8211; жутко наворочанный пакет, вроде бы есть все что нужно, все очень кастомно. но того как оно сделано я вряд ли скоро пойму. много-много черной магии для выполнения простых операций. много, очень много sql-я (без orm-а). Сразу же был откинут.</li>
+		<li><a href="http://github.com/alex/django-taggit">django-taggit</a> проект поменьше чем предыдущий. но черная магия опять таки присутствует. в некоторых моментах я тупо не разобрался.</li>
+		<li><a href="http://softwaremaniacs.org/soft/tagsfield/">tagsfield</a> от Ивана Сагалаева. Вот оно то что нужно. Идея проста &#8211; наследуемся от ManyToManyField и заменяем дефолтный widget на собственный. Кода ну очень мало, все предельно понятно. Выбрал я его. Конечно же понадобились изменения.</li>
+	</ol></li>
+		<li>первым делом копируем к себе tagsfield, добавляем его в installed_apps</li>
+		<li>изначально проект работает так: в html записывается список всех тагов и список всех тагов объекта, через javascript все это управляется &#8211; юзер может добавлять и убирать теги обекта, может добавлять новые. Когда форма сабмитится список активных тагов сохраняется в поле m2m.</li>
+		<li>для моего подхода (<i>de.li.cious style</i> таги) было сделано следующее</li>
+		<li>поле MultipleHiddenInput было заменено на TextInput. Поясняю &#8211; при сабмите приходил список значений hidden-input-ов, а мне нужно только одно text-input поле. <pre class="prettyprint lang-python">
+class TagsFormField(forms.Field):
+    text_widget = forms.TextInput
+</pre></li>
+		<li>собственно загрузка списка тагов (метод render): <pre class="prettyprint lang-python">
+&#39;value_tags&#39;: &#34; &#34;.join(value_tags)
+</pre></li>
+		<li>из модели убрал поле created и переименовал модель в BaseTag (зачем &#8211; ниже) <pre class="prettyprint lang-python">
+class BaseTag(models.Model):
+    value = models.CharField(max_length=50)
+    norm_value = models.CharField(max_length=50, editable=False)
+</pre></li>
+		<li>сохранение: <pre class="prettyprint lang-python">
+def save_form_data(self, instance, data):
+    splitted = data.strip().split(&#39; &#39;)
+    tags = [self._get_tag(value) for value in splitted]
+    setattr(instance, self.attname, tags)
+</pre></li>
+		<li>шаблон виджета: ==<pre class="prettyprint lang-django"></li>
+	</ol>
+
+	<p>&lt;div id=&#34;{{ id }}&#34; class=&#34;tagsfield&#34;&gt;<br />
+&lt;input type=&#34;text&#34; name=&#34;{{ name }}&#34; value=&#34;{{ value_tags }}&#34; /&gt;<br />
+&lt;/div&gt;</p>
+
+	<p></pre>
+# удалил больше не нужные файлы и зачистил js и css файлы. Еще были изменения, но все незначительные, так что лучше их смотреть в репозитории.
+# теперь об одном ограничении оригинального кода - все таги хранятся в одной таблице. То есть если навешать таги на два класса - таги у них будут общие. Плохо. Для решения использовал еще один уровень абстракции, в приложении Purchases создал новый класс PurchaseTag который является наследником BaseTag. Теперь в бд будет две таблицы - одна для BaseTag из приложения TagField и одна для PurchaseTag из приложения Purchase. Таги для них не пересекаются :) Ну и собственно TagField одинаково хорошо работает для PurchaseTag класса. Тем более в последствии можно кастомизировать PurchaseTag и добавить к нему дополнительные поля. В файле purchases/models.py (старый класс Tag уже затерт) <pre class="prettyprint lang-python"><br />
+from homebudget.tagsfield import fields<br />
+from homebudget.tagsfield.models import BaseTag<br />
+class Purchase(models.Model):
+    &#8230; 
+    tags = fields.TagsField(&#39;PurchaseTag&#39;)<br />
+class PurchaseTag(BaseTag):
+    pass<br />
+class PurchaseItemForm(ModelForm):
+    class Meta:
+        model = Purchase
+        exclude = (&#39;purchase_date&#39;,)<br />
+</pre>
+# Ну и в коде везде где обращались к Tag теперь обращаемся к PurchaseTag, ну и из мелочи - поле name изменилось на value.
+# Как проходила миграция данных (замена старых тагов на новые). У меня база уже забита. Собственно для этого и прикручивался South (см. выше)
+# Сначала была таблица для приложения TagField (чтобы не было никаких проблем)
+# Потом было добавлена модель PurchaseTag в проект Purchases, в модель Purchase было добавлено поле ntags = fields.TagsField('PurchaseTag'), старое поле tags = models.ManyToManyField('Tag') не удаляя.
+# Первая попытка миграции. Не работает (!!) и South отправляет на страницы "http://south.aeracode.org/wiki/MyFieldsDontWork":http://south.aeracode.org/wiki/MyFieldsDontWork "http://south.aeracode.org/docs/customfields.html#extending-introspection":http://south.aeracode.org/docs/customfields.html#extending-introspection. Типа дописывайте сами себе правила на собственные поля. Ну ведь использовано поле отнаследованное от m2m, значит и вести оно должно себя также.. Значит спиздим определение ManyToManyField из кода south-а. Поставим это прямо возле определения TagsField-а. <pre class="prettyprint lang-python"><br />
+rules = [<br />
+(
+    (TagsField,),
+    [],
+    {
+        &#34;to&#34;: [&#34;rel.to&#34;, {}],
+        &#34;symmetrical&#34;: [&#34;rel.symmetrical&#34;, {&#34;default&#34;: True}],
+        &#34;related_name&#34;: [&#34;rel.related_name&#34;, {&#34;default&#34;: None}],
+        &#34;db_table&#34;: [&#34;db_table&#34;, {&#34;default&#34;: None}],
+        &#34;through&#34;: [&#34;rel.through&#34;, {&#34;ignore_if_auto_through&#34;: True}],
+    },<br />
+),<br />
+]<br />
+from south.modelsinspector import add_introspection_rules<br />
+add_introspection_rules(rules, [&#34;^homebudget\.tagsfield\.&#34;])<br />
+</pre>
+# Теперь создание точки миграции должно пройти успешно. Теперь у нас есть два поля тагов в модели. Делаем миграцию данных. Для каждого старого тега добавляем новый, и повторяем все соотношения. В общем выглядит это так: <pre class="prettyprint lang-python"><br />
+class Migration(DataMigration):
+    def forwards(self, orm):
+        plist = orm.Purchase.objects.all()
+        for p in plist:
+            old_tags = p.tags.all()
+            for i in old_tags:
+                norm_value = i.name.lower()
+                tag, created = orm.PurchaseTag.objects.get_or_create(
+                    norm_value = norm_value,
+                    defaults = {&#39;value&#39;: i.name}
+                )
+                p.ntags.add(tag)
+                p.tags.remove(i)
+            p.save()
+        old_tags = orm.Tag.objects.all()
+        for i in old_tags:
+            i.delete()
+    def backwards(self, orm):
+        &#34;Write your backwards methods here.&#34;
+        plist = orm.Purchase.objects.all()
+        for p in plist:
+            old_tags = p.ntags.all()
+            for i in old_tags:
+                tag, created = orm.Tag.objects.get_or_create(
+                    name = i.value,
+                )
+                p.tags.add(tag)
+                p.ntags.remove(i)
+            p.save()
+        old_tags = orm.PurchaseTag.objects.all()
+        for i in old_tags:
+            i.delete()<br />
+</pre>
+# Теперь удаляем модель Tag (старую) и поле tags. Апдейтим базу через South.
+# Все хорошо, только поле называется ntags... Переименовываем поле. Смотрим в скрипт сгенеренный South-ом - не порядок, он пытается удалить нашу таблицу и создать новую. Исправляем его ошибку и накатываем изменения <pre class="prettyprint lang-python"><br />
+class Migration(SchemaMigration):
+    def forwards(self, orm):
+        db.rename_table(&#39;purchases_purchase_ntags&#39;, &#39;purchases_purchase_tags&#39;)
+    def backwards(self, orm):
+        db.rename_table(&#39;purchases_purchase_tags&#39;, &#39;purchases_purchase_ntags&#39;)<br />
+</pre>==
+	<ol>
+		<li>Теперь все хорошо :)</li>
+	</ol></p>
+
+
+    </div><!--content container-->
+    <div class="footer">
+      <div class="text-muted">
+        Copyright &copy; 2014 by Alexey Vasilyev
+
+        <div class="contacts">
+          Contact me via <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#108;&#105;&#103;&#104;&#116;&#46;&#112;&#97;&#114;&#116;&#105;&#99;&#108;&#101;&#64;&#121;&#97;&#110;&#100;&#101;&#120;&#46;&#99;&#111;&#109;">mail</a>, <a href="https://twitter.com/alexadotlife">twitter</a>, or <a href="https://github.com/alexa-infra">github</a>. More info: <a href="/">About</a>. (<a href="http://alexadotlife.com/feed.atom">feed</a>)
+        </div><!--contacts-->
+      </div>
+    </div><!--footer-->
+  </body>
+</html>

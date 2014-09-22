@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="author" content="" />
+    <meta name="keywords" lang="en" content="homepage, alexey vasilyev, c++, developer, cv" />
+    <title>alexa.life : Технические детали блога</title>
+    <link rel="icon" href="/static/icons/favicon.ico"/>
+    <link href="/static/css/bootstrap.css" rel="stylesheet">
+    <link href="/static/css/bootstrap-responsive.css" rel="stylesheet">
+    <link href="http://alexadotlife.com/feed.atom" rel="alternate" title="alexa.life" type="application/atom+xml" /> 
+    <script type="text/javascript" src="/static/js/jquery-1.8.0.min.js"></script>
+    
+  <link rel="stylesheet" href="/static/css/tomorrow.css">
+  <script type="text/javascript" src="/static/js/prettify.js"></script>
+  <script type="text/javascript">
+    $(document).ready(function() {
+        $('pre, code').addClass("prettyprint");
+        $('pre code').removeClass("prettyprint");
+        prettyPrint();
+    });
+  </script>
+
+    
+    <style type="text/css">
+      html { min-height: 100%; position: relative; }
+      body { margin-bottom: 65px; }
+      .footer { position: absolute; bottom: 0; width: 100%; height: 65px; text-align: center; }
+      .content-title { display: none; margin-bottom: 42px; } 
+      .content { max-width: 900px; margin: 48px auto; padding: 0 40px; }
+      .site-header { float: left; left: 0; }
+      .site-navi { float: right; right: 0; }
+      .site-navi ul { list-style: none; margin: 0; padding: 0; }
+      .site-navi ul li { display: inline; margin: 0 2px; padding: 0; }
+      .site-navi ul li a { font-size: 18px; line-height: 27px; font-weight: bold; }
+      
+  .content-title { display: block; }
+  .post-title { margin-bottom: 25px; }
+
+      
+    </style>
+  </head>
+  <body>
+    <div class="content container">
+      <div class="content-title">
+        <div class="site-header">
+          <h3><a href="http://alexadotlife.com/">Alexey Vasilyev</a>'s Thoughts and Writings</h3>
+        </div><!--site-header-->
+        <div class="site-navi">
+          <ul>
+            <li><a href="/blog/">Blog</a></li>
+            <li><a href="/">About</a></li>
+          </ul>
+        </div><!--site-navi-->
+      </div><!--content-title-->
+      
+  <div class="post-title">
+    <h1>Технические детали блога</h1>
+    <i>Published: 2011, February 13</i>
+  </div><!--post-title-->
+  
+	<p>Хочу осветить технические аспекты этого блога, чтобы осталось в истории.</p>
+
+	<p>Сначала, самое основное, то есть список всего на чем крутится сайт</p>
+
+	<ol>
+		<li><span class="caps">VPS</span> сервер от <a href="http://www.keyweb.ru/">keyweb</a></li>
+		<li>ос <a href="http://www.ubuntu.com/">ubuntu</a></li>
+		<li>веб-сервер <a href="http://nginx.org/">nginx</a></li>
+		<li>генератор статик сайта <a href="http://piranha.org.ua/cyrax/">cyrax</a>
+	<ol>
+		<li>разметка <a href="http://en.wikipedia.org/wiki/Textile_%28markup_language%29">textile</a> в реализации для пайтона <a href="http://pypi.python.org/pypi/textile">python-textile</a></li>
+		<li>подсветка синтаксиса <a href="http://pygments.org/">pygments</a></li>
+		<li>шаблоны <a href="http://jinja.pocoo.org/">jinja2</a></li>
+	</ol></li>
+		<li>сбор статистики <a href="http://www.google.com/analytics/">google analytics</a></li>
+		<li>комментарии <a href="http://disqus.com/">disqus</a></li>
+		<li>контроль версий <a href="http://mercurial.selenic.com/">mercurial</a></li>
+	</ol>
+
+	<p>Как к этому все пришло. 
+	<ol>
+		<li>вопервых меня не устраивает устройство существующих блог-платформ blogger, livejournal и тп.
+	<ol>
+		<li>очень ограниченная функциональность создания постов в онлайновых редакторах: raw-html или <span class="caps">WYSIWYG</span>.</li>
+		<li>нужно писать обязательно в хтмле чтобы все выглядело пристойно. Это не удобно. можно конечно же делать через <span class="caps">WYSIWYG</span>, но чтобы финальный текст привести к органичному виду, нужно еще как постараться</li>
+		<li>мне нравится wiki-подобная разметка (creole, textile, media-wiki), которая существенно упрощает генерацию хтмл-я. Вот например горячо мной любимые нумерованные списки ol-li, делать на wiki очень и очень приятно.</li>
+		<li>есть конечно же варианты вести отдельно wiki и постить посты html-ем сгенеренным по wiki, было подсмотренно <a href="http://easy-coding.blogspot.com/2009/12/wiki2blog-wiki-blogspot.html">здесь</a> и <a href="http://easy-coding.blogspot.com/2009/07/google-code.html">здесь</a>. Но у этого подхода есть сложность в комплексности: нужно помнить какие изменения перенесены, что-где хранится, постоянно переходить между 2-3 страницами, дополнительные приседания для допиливания финального хтмля.</li>
+		<li>для вставки исходного кода в пост его нужно обязательно енкодить, что накладывает дополнительные издержки на хранение исходного состояния перед вставкой.</li>
+		<li>возможности кастомизации внешенего вида сводятся к изменению макета страницы и добавления гаджетов.</li>
+		<li>если нужно добавить например подсветку синтаксиса &#8211; нужно использовать внешний ресурс, с картинками такая же лажа. в итоге сайт хранится в 10 различных местах.</li>
+		<li>существующих возможностей бекапов мне не хватает</li>
+		<li>контроль версий, который очень удобен для создания текстов, отсутствует</li>
+		<li>минимальных возмозможностей автоматизации нет.</li>
+	</ol></li>
+		<li>Использовать готовый движок блога, типа WordPress. Вообще говоря вариант, но мне отпугивют либо гигантские возможности и размеры, либо не достаточная функциональность минималистичных движков. В любом случае, чтобы найти то что мне подойдет из готового нужно тратить время на изучение, установку и так далее.</li>
+		<li>Идея написать новый движок блога на django изначально летала в голове, но представляя себе банальнейшую архитектуру Author-Article-Tag-Comment со всеми дополнительными действиями меня воротило.
+	<ol>
+		<li>очевидным плюсом является доморощенность, с 100% знанием системы</li>
+		<li>минусом &#8211; бесцельно потраченное время, еще один никому, кроме меня, ненужный движок блога</li>
+	</ol></li>
+		<li>Так что был выбран подход суперпозиции двух предыдущих пунктов: <i>good coders code, great reuse</i>
+	<ol>
+		<li>была обнаружена идея статической генерации контента, в ходе поисков был найден cyrax</li>
+		<li>это дало возможность хранить изменения постов под контролем версий</li>
+		<li>автоматизация всего и вся, от возможностей темплейтов jinja2 до фильтров и коллбеков на python</li>
+		<li>например использование разметки textile и управление енкодом &#8211; всего лишь фильтры в темплейте</li>
+		<li>наименьшая нагрузка на сервер, так как идет раздача только статического хтмля, без всяких БД. Статьи ведь меняются очень не часто (раз в день, неделю, месяц).</li>
+		<li>весь динамический контент &#8211; это только комменты, но онлайновые системы комментирования давно существуют &#8211; disqus</li>
+		<li>всякие возможности админок, авторизаций на сайте считаю для блога лишними &#8211; цель блога ведь изложение собственных мыслей и общение с людьми. сочинять посты мне гораздо удобнее в vim, а аплоадить их на сервер &#8211; не обломно.</li>
+		<li>процесс работы, для автора, достаточно прост и гибок.</li>
+		<li>сама структура хранения текстов в виде темплейтов jinja2, полная python-ориентированность, дает безграничные возможности для модификации, конвертации и тп. можно допустим перевести все это на django без больших особых трудозатрат</li>
+	</ol></li>
+	</ol></p>
+
+
+    </div><!--content container-->
+    <div class="footer">
+      <div class="text-muted">
+        Copyright &copy; 2014 by Alexey Vasilyev
+
+        <div class="contacts">
+          Contact me via <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#108;&#105;&#103;&#104;&#116;&#46;&#112;&#97;&#114;&#116;&#105;&#99;&#108;&#101;&#64;&#121;&#97;&#110;&#100;&#101;&#120;&#46;&#99;&#111;&#109;">mail</a>, <a href="https://twitter.com/alexadotlife">twitter</a>, or <a href="https://github.com/alexa-infra">github</a>. More info: <a href="/">About</a>. (<a href="http://alexadotlife.com/feed.atom">feed</a>)
+        </div><!--contacts-->
+      </div>
+    </div><!--footer-->
+  </body>
+</html>

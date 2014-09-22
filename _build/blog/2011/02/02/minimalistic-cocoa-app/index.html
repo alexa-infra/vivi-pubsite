@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="author" content="Alexey Vasilyev" />
+    <meta name="keywords" lang="en" content="homepage, alexey vasilyev, c++, developer, cv" />
+    <title>alexa.life : Minimalistic cocoa application</title>
+    <link rel="icon" href="/static/icons/favicon.ico"/>
+    <link href="/static/css/bootstrap.css" rel="stylesheet">
+    <link href="/static/css/bootstrap-responsive.css" rel="stylesheet">
+    <link href="http://alexadotlife.com/feed.atom" rel="alternate" title="alexa.life" type="application/atom+xml" /> 
+    <script type="text/javascript" src="/static/js/jquery-1.8.0.min.js"></script>
+    
+  <link rel="stylesheet" href="/static/css/tomorrow.css">
+  <script type="text/javascript" src="/static/js/prettify.js"></script>
+  <script type="text/javascript">
+    $(document).ready(function() {
+        $('pre, code').addClass("prettyprint");
+        $('pre code').removeClass("prettyprint");
+        prettyPrint();
+    });
+  </script>
+
+    
+<link rel="stylesheet" href="/static/css/pygments.css">
+
+    <style type="text/css">
+      html { min-height: 100%; position: relative; }
+      body { margin-bottom: 65px; }
+      .footer { position: absolute; bottom: 0; width: 100%; height: 65px; text-align: center; }
+      .content-title { display: none; margin-bottom: 42px; } 
+      .content { max-width: 900px; margin: 48px auto; padding: 0 40px; }
+      .site-header { float: left; left: 0; }
+      .site-navi { float: right; right: 0; }
+      .site-navi ul { list-style: none; margin: 0; padding: 0; }
+      .site-navi ul li { display: inline; margin: 0 2px; padding: 0; }
+      .site-navi ul li a { font-size: 18px; line-height: 27px; font-weight: bold; }
+      
+  .content-title { display: block; }
+  .post-title { margin-bottom: 25px; }
+
+      
+    </style>
+  </head>
+  <body>
+    <div class="content container">
+      <div class="content-title">
+        <div class="site-header">
+          <h3><a href="http://alexadotlife.com/">Alexey Vasilyev</a>'s Thoughts and Writings</h3>
+        </div><!--site-header-->
+        <div class="site-navi">
+          <ul>
+            <li><a href="/blog/">Blog</a></li>
+            <li><a href="/">About</a></li>
+          </ul>
+        </div><!--site-navi-->
+      </div><!--content-title-->
+      
+  <div class="post-title">
+    <h1>Minimalistic cocoa application</h1>
+    <i>Published: 2011, February 02</i>
+  </div><!--post-title-->
+  
+Some time ago I faced with problem - to write crossplatform application with GUI, but it should not contain any tool-specific resources like MSVC rc files, or xcode resources. It should build GUI in the most native way. Simplify problem: there was the following interface in existing code base, that I have to satisfy. 
+<pre class="prettyprint lang-cpp">
+struct IWindow
+{
+  virtual void Create() = 0;
+  virtual void DoEvents() = 0;
+  virtual void Focus() = 0;
+  virtual void Hide() = 0;
+  virtual void Close() = 0;
+  virtual bool IsClosed() = 0;
+};
+</pre>
+And an application should be designed to use the similar pattern (it comes from windows-os application as far you can see):
+<pre class="prettyprint lang-cpp">
+int main()
+{
+  IWindow* window = OSDependent::GetCurrentWindowSystem()-&gt;GetWindow();
+  windiw-&gt;Create();
+  window-&gt;Focus();
+  while (!window-&gt;IsClose())
+  {
+    window-&gt;DoEvents();
+    // some logic should be placed here
+  }
+  return 0;
+}
+
+#ifdef __OBJC__
+class MyWindow : public IWindow
+{
+public:
+  ///!&lt; .. methods of IWindow interface
+protected:
+  NSWindow* window_;
+};
+#endif // __OBJC__
+</pre>
+
+After a lot of reading and number of tries, I made a native Cocoa window without any xcode-specific resource. Ta-da-dam!! :) The main function of this post:
+<pre class="prettyprint lang-cpp">
+void MyWindow::Create()
+{
+  NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
+   
+  [NSApplication sharedApplication];
+  [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+        
+  unsigned int styles = NSResizableWindowMask | 
+    NSClosableWindowMask | 
+    NSTitledWindowMask;
+        
+  NSRect rectanle = NSMakeRect(100, 100, 640, 480);
+  window_ = [[NSWindow alloc] 
+    initWithContentRect:rectangle
+    styleMask:styles
+    backing:NSBackingStoreBuffered 
+    defer:NO];
+  [window_ setTitle:@&#34;(none)&#34;];
+  [window_ setReleasedWhenClosed:NO];
+  [window_ 
+    performSelectorOnMainThread:@selector(makeKeyAndOrderFront:) 
+    withObject:nil 
+    waitUntilDone:YES];
+  [NSApp activateIgnoringOtherApps:YES];
+  [NSApp finishLaunching];
+        
+  [pool release];
+}
+</pre>
+The most strange code here is setActivationPolicy code line. It allows window to be activated, receive keyboard and mouse event and more. I spent a lot of time to find it (this was my first macosx experience). 
+
+Next key of system - a message pump. Usually, it isn't necessary, because of usage [NSApp run]; functionality to make window application work. As far I understand NSApp run includes look-like code. In my case, I have to implement message cycle by myself. Here it is:
+<pre class="prettyprint lang-cpp">
+void MyWindow::DoEvents()
+{
+  NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
+  NSEvent* event = [NSApp nextEventMatchingMask:NSAnyEventMask
+    untilDate:[NSDate distantPast]
+    inMode:NSDefaultRunLoopMode
+    dequeue:YES];
+  if (event) {
+    [NSApp sendEvent:event];
+    [NSApp updateWindows];
+  }
+  [pool release];
+}
+</pre>
+
+Other minor function implementation, easy to get, but might be useful:
+<pre class="prettyprint lang-cpp">
+bool MyWindow::IsClosed() 
+{
+  return ![window_ isVisible];
+}
+void MyWindow::Focus()
+{
+  NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
+  [window_ makeKeyAndOrderFront:nil];
+  [pool release];
+}
+void MyWindow::Hide()
+{
+  NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
+  [window_ orderOut:nil];
+  [pool release];
+}
+void MyWindow::Close()
+{
+  [window_ close];
+}
+</pre>
+
+As for addition, we could add custom NSView to our window, here the defenition of derived view. 
+<pre class="prettyprint lang-cpp">
+@interface MyView : NSView
+{
+  MyWindow* window_;
+}
+
+- (id)initWithFrame:(NSRect)rectangle;
+- (id)initWithMyWindow:(MyWindow*)window;
+- (MyWindow*)getWindow;
+@end
+
+@implementation MyView
+
+- (id)initWithFrame:(NSRect)rectangle
+{
+  self = [super initWithFrame:rectangle];
+  m_Window = 0;
+  return self;
+}
+- (id)initWithMyWindow:(MyWindow*)window
+{
+  Math::Rect wr = w-&gt;GetRectangle();
+  NSRect r = NSMakeRect(wr.x, wr.y, wr.Width, wr.Height);
+  if (self = [self initWithFrame:r])
+  {
+    window_ = window;
+  }
+  return self;
+}
+- (MyWindow*)getWindow
+{
+  return window_;
+}
+- (BOOL)acceptsFirstResponder
+{
+  return YES;
+}
+- (BOOL)becomeFirstResponder
+{
+  return YES;
+}
+- (BOOL)resignFirstResponder
+{
+  return YES;
+}
+- (BOOL)canBecomeKeyView
+{
+  return YES;
+}
+@end
+</pre>
+
+Final window create method:
+<pre class="prettyprint lang-cpp">
+void MyWindow::Create()
+{
+  NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
+        
+  [NSApplication sharedApplication];
+  [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+        
+  unsigned int styles = NSResizableWindowMask | 
+    NSClosableWindowMask | 
+    NSTitledWindowMask;
+        
+  NSRect rectanle = NSMakeRect(100, 100, 640, 480);
+  window_ = [[NSWindow alloc] 
+    initWithContentRect:rectangle
+    styleMask:styles
+    backing:NSBackingStoreBuffered 
+    defer:NO];
+
+  [window_ setTitle:@&#34;(none)&#34;];
+        
+  [window_ setReleasedWhenClosed:NO];
+       
+  view_ = [[MyView alloc] initWithMyWindow:this];
+  [window_ setContentView:view_];
+  [window_ makeFirstResponder:view_];
+        
+  [view_ setFrame:NSMakeRect(0, 0, rectangle.Width, rectangle.Height)];
+       
+  [window_ 
+    performSelectorOnMainThread:@selector(makeKeyAndOrderFront:) 
+    withObject:nil 
+    waitUntilDone:YES];
+  [NSApp activateIgnoringOtherApps:YES];
+  [NSApp finishLaunching];
+        
+  [pool release];
+}
+</pre>
+
+That's all. Yes, this is not the most minimal cocoa application, but it is created without usage of xcode magic, and includes not-big code :) The most interesting and hard things have been found at <a href="http://cocoawithlove.com/">cocoa with love</a>.
+<br>
+P.S. Sorry for my bad english ^^
+
+
+
+    </div><!--content container-->
+    <div class="footer">
+      <div class="text-muted">
+        Copyright &copy; 2014 by Alexey Vasilyev
+
+        <div class="contacts">
+          Contact me via <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#108;&#105;&#103;&#104;&#116;&#46;&#112;&#97;&#114;&#116;&#105;&#99;&#108;&#101;&#64;&#121;&#97;&#110;&#100;&#101;&#120;&#46;&#99;&#111;&#109;">mail</a>, <a href="https://twitter.com/alexadotlife">twitter</a>, or <a href="https://github.com/alexa-infra">github</a>. More info: <a href="/">About</a>. (<a href="http://alexadotlife.com/feed.atom">feed</a>)
+        </div><!--contacts-->
+      </div>
+    </div><!--footer-->
+  </body>
+</html>

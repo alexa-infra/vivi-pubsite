@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="author" content="" />
+    <meta name="keywords" lang="en" content="homepage, alexey vasilyev, c++, developer, cv" />
+    <title>alexa.life : Minimalistic C++ lambda</title>
+    <link rel="icon" href="/static/icons/favicon.ico"/>
+    <link href="/static/css/bootstrap.css" rel="stylesheet">
+    <link href="/static/css/bootstrap-responsive.css" rel="stylesheet">
+    <link href="http://alexadotlife.com/feed.atom" rel="alternate" title="alexa.life" type="application/atom+xml" /> 
+    <script type="text/javascript" src="/static/js/jquery-1.8.0.min.js"></script>
+    
+  <link rel="stylesheet" href="/static/css/tomorrow.css">
+  <script type="text/javascript" src="/static/js/prettify.js"></script>
+  <script type="text/javascript">
+    $(document).ready(function() {
+        $('pre, code').addClass("prettyprint");
+        $('pre code').removeClass("prettyprint");
+        prettyPrint();
+    });
+  </script>
+
+    
+    <style type="text/css">
+      html { min-height: 100%; position: relative; }
+      body { margin-bottom: 65px; }
+      .footer { position: absolute; bottom: 0; width: 100%; height: 65px; text-align: center; }
+      .content-title { display: none; margin-bottom: 42px; } 
+      .content { max-width: 900px; margin: 48px auto; padding: 0 40px; }
+      .site-header { float: left; left: 0; }
+      .site-navi { float: right; right: 0; }
+      .site-navi ul { list-style: none; margin: 0; padding: 0; }
+      .site-navi ul li { display: inline; margin: 0 2px; padding: 0; }
+      .site-navi ul li a { font-size: 18px; line-height: 27px; font-weight: bold; }
+      
+  .content-title { display: block; }
+  .post-title { margin-bottom: 25px; }
+
+      
+    </style>
+  </head>
+  <body>
+    <div class="content container">
+      <div class="content-title">
+        <div class="site-header">
+          <h3><a href="http://alexadotlife.com/">Alexey Vasilyev</a>'s Thoughts and Writings</h3>
+        </div><!--site-header-->
+        <div class="site-navi">
+          <ul>
+            <li><a href="/blog/">Blog</a></li>
+            <li><a href="/">About</a></li>
+          </ul>
+        </div><!--site-navi-->
+      </div><!--content-title-->
+      
+  <div class="post-title">
+    <h1>Minimalistic C++ lambda</h1>
+    <i>Published: 2012, April 15</i>
+  </div><!--post-title-->
+  
+	<p>Some time ago my comrade asked me to help him with one C++ issue. There is the original description:</p>
+
+	<p><em>The following program calculates a product of an array. Please add missing definitions, classes, and objects, so that the program could be compiled and could return correct result. It is required to use only standard template library of C++.</em> </p>
+
+<pre><code>int main ()
+{
+    int v[] = { 1, 2, 3, 4, 5 };
+    unsigned long m = 1;
+    std::for_each (v, v+5, var(m) = var(m) * _1);
+    std::cout &lt;&lt; &#34;m=&#34; &lt;&lt; m &lt;&lt; std::endl;
+    return 0;
+}
+</code></pre>
+
+	<p>My first thought was &#8216;this is a boost lambda sytax&#8217;, and &#8216;boost is an almost standard&#8217;. So it is needed only to add boost lambda library (thankful it is completly header-only library), and the following code should be added to the beginning of program:</p>
+
+<pre><code>#include &lt;iostream&gt;
+#include &lt;algorithm&gt;
+#include &lt;boost/lambda/lambda.hpp&gt;
+using namespace boost::lambda;
+</code></pre>
+
+	<p>But&#8230; this solution has been rejected with notice &#8216;only standard templates library (<span class="caps">STL</span>) should be used, no boost, no c++11..&#8217;. Sadly. After several unsuccessful attempts to compact boost lambda code, I&#8217;ve ended up with very basic template-based metaprogramming solution (in other words &#8211; completely simple functors) to solve only this issue. Here my code:</p>
+<pre><code>#include &lt;iostream&gt;
+#include &lt;algorithm&gt;
+</code>
+<code>//! Placeholder variable
+//! returns value of actor
+struct Placeholder {
+    template&lt; typename Type &gt;
+    Type operator()( const Type&amp; val ) const { return val; }
+};
+//! Global defined placeholder
+//! it should be initialized before expression
+Placeholder _1;
+</code>
+<code>//! Single constant
+//! store constant value, and return it in action
+struct Constant {
+private:
+    int _value;
+public:
+    Constant( const int&amp; value ) : _value( value ) {}
+    int operator()( const int&amp; value ) const { return _value; }
+};
+</code>
+<code>//! Multiplication of two functors
+//!
+template&lt; typename FirstType, typename SecondType &gt;
+struct Prod {
+private:
+    FirstType _first;
+    SecondType _second;
+public:
+    Prod( const FirstType&amp; first, const SecondType&amp; second )
+        : _first( first ), _second( second ) {}
+    template&lt; typename Type &gt;
+    Type operator()( const Type&amp; t ) const { return _first(t) * _second(t); }
+};
+</code>
+<code>//! Equals
+//!
+template&lt; typename FirstType, typename SecondType &gt;
+struct Eq {
+private:
+    FirstType _first;
+    SecondType _second;
+public:
+    Eq( const FirstType&amp; first, const SecondType&amp; second )
+        : _first( first ), _second( second ) {}
+    template&lt; typename Type &gt;
+    Type operator()(const Type&amp; t) const { return _first(t) = _second(t); }
+};
+</code>
+<code>//! Argument
+//! 
+template&lt;typename Type&gt;
+struct Arg {
+private:
+    Type&amp; _t;
+public:
+    explicit arg(Type&amp; t) : _t(t) {}
+    template&lt; typename ActorType &gt;
+    Type&amp; operator()(const ActorType&amp;) const {
+        return _t;
+    }
+    //! x * y
+    template&lt; typename ActorType &gt;
+    Prod&lt; Arg&lt;Type&gt;, ActorType &gt; operator*(const ActorType&amp; p) const {
+        return Prod&lt; Arg&lt;Type&gt;, ActorType &gt;( Arg&lt;Type&gt;( _t ), p );
+    }
+    //! x * 5
+    Prod&lt; Arg&lt;Type&gt;, Constant &gt; operator*( const int&amp; p ) const {
+        return Prod&lt;Arg&lt;Type&gt;, Constant &gt;( Arg&lt;Type&gt;( _t ), Constant( p ) );
+    }
+    //! x = y
+    template&lt;typename ActorType&gt;
+    Eq&lt; Arg&lt;Type&gt;, ActorType&gt; operator=( const ActorType&amp; p ) const {
+        return eq&lt; arg&lt;Type&gt;, ActorType &gt;( Arg&lt;Type&gt;( _t ), p );
+    }
+    //! x = 5
+    Eq&lt; Arg&lt;Type&gt;, Constant&gt; operator=( const int&amp; p ) const {
+        return Eq&lt; Arg&lt;T&gt;, Constant &gt;( Arg&lt;Type&gt;( _t ), Constant( p ) );
+    }
+};
+typedef Arg&lt;unsigned long&gt; var;
+</code></pre>
+
+	<p>I don&#8217;t have an answer from my comrade but it seems that solution is right. It is a good practice in C++ metaprogramming, and at least I have got minimalistic c++ lambda library. This code could be expanded to other math operations, and etc. I will be happy if this small library help anybody.</p>
+
+
+    </div><!--content container-->
+    <div class="footer">
+      <div class="text-muted">
+        Copyright &copy; 2014 by Alexey Vasilyev
+
+        <div class="contacts">
+          Contact me via <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#108;&#105;&#103;&#104;&#116;&#46;&#112;&#97;&#114;&#116;&#105;&#99;&#108;&#101;&#64;&#121;&#97;&#110;&#100;&#101;&#120;&#46;&#99;&#111;&#109;">mail</a>, <a href="https://twitter.com/alexadotlife">twitter</a>, or <a href="https://github.com/alexa-infra">github</a>. More info: <a href="/">About</a>. (<a href="http://alexadotlife.com/feed.atom">feed</a>)
+        </div><!--contacts-->
+      </div>
+    </div><!--footer-->
+  </body>
+</html>

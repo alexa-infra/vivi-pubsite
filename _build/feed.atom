@@ -1,0 +1,398 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:thr="http://purl.org/syndication/thread/1.0">
+  <id>http://alexadotlife.com/</id>
+  <title>alexa.life</title>
+  <updated>2013-10-13T00:00:00Z</updated>
+  <author>
+    <name>Alexey Vasilyev</name>
+  </author>
+  <link href="http://alexadotlife.com/" rel="alternate"></link>
+  <entry>
+    <id>http://alexadotlife.com/blog/2013/10/13/boost-python-mingw64/</id>
+    <title type="html">boost.python and mingw64</title>
+    <updated>2013-10-13T00:00:00Z</updated>
+    <published>2013-10-13T00:00:00Z</published>
+    <category term="python"></category><category term="c++"></category>
+    <link href="http://alexadotlife.com/blog/2013/10/13/boost-python-mingw64/" rel="alternate"></link>
+    <content type="html">
+
+	&lt;h4&gt;Environment&lt;/h4&gt;
+
+	&lt;ol&gt;
+		&lt;li&gt;boost 1.54.0&lt;/li&gt;
+		&lt;li&gt;mingw 48.1 &amp;#215;64 (mingw-x64-4.8.1-release-posix-seh-rev1) from &lt;a href=&#34;http://sourceforge.net/projects/mingwbuilds/files/host-windows/releases/4.8.1/64-bit/threads-posix/seh/&#34;&gt;mingwbuilds&lt;/a&gt;&lt;/li&gt;
+		&lt;li&gt;python 2.7.3 &amp;#215;64&lt;/li&gt;
+	&lt;/ol&gt;
+
+	&lt;h4&gt;In short:&lt;/h4&gt;
+
+	&lt;p&gt;python does not define MS_WIN64 for gcc, it defines the one only for visual studio. (see python27/include/pyconfig.h:142). solution &amp;#8211; you have to build boost.python and your modules with -&lt;span class=&#34;caps&#34;&gt;DMS&lt;/span&gt;_WIN64 option.&lt;/p&gt;
+
+	&lt;h4&gt;In long way (store all commands just for reference):&lt;/h4&gt;
+
+	&lt;p&gt;&lt;em&gt;note: I use &lt;span class=&#34;caps&#34;&gt;GOW&lt;/span&gt; package, it contains some useful ported from linux programs like cp, mv, etc.&lt;/em&gt;&lt;/p&gt;
+
+	&lt;p&gt;make sure mingw64/bin and python27/bin is in &lt;span class=&#34;caps&#34;&gt;PATH&lt;/span&gt; variable&lt;/p&gt;
+
+	&lt;p&gt;create static python library (if needed):&lt;/p&gt;
+
+&lt;pre class=&#34;prettyprint lang-bash&#34;&gt;
+gendef.exe python27.dll
+dlltool.exe &amp;#8212;dllname python27.dll &amp;#8212;def python27.def &amp;#8212;output-lib libpython27.a
+mv libpython27.a d:\devtools\python27\libs\
+&lt;/pre&gt;
+
+	&lt;p&gt;build boost.python:&lt;/p&gt;
+
+&lt;pre class=&#34;prettyprint lang-bash&#34;&gt;
+bootstrap.bat
+b2 toolset=gcc address-model=64 variants=debug,release link=static,shared threading=multi define=MS_WIN64 &amp;#8212;with-python stage
+&lt;/pre&gt;
+
+	&lt;p&gt;useful flags for debugging (same for bjam):&lt;/p&gt;
+
+&lt;pre class=&#34;prettyprint lang-bash&#34;&gt;
+b2 -a -q &amp;#8212;debug-configuration
+b2 -d+2
+&lt;/pre&gt;
+
+	&lt;p&gt;build test embedding module&lt;/p&gt;
+
+&lt;pre class=&#34;prettyprint lang-bash&#34;&gt;
+cd libs\python\examples\quickstart
+..\..\..\..\bjam.exe toolset=gcc address-model=64 define=MS_WIN64 &amp;#8212;verbose-test test
+&lt;/pre&gt;
+
+	&lt;p&gt;build sample library:&lt;/p&gt;
+
+&lt;pre class=&#34;prettyprint lang-bash&#34;&gt;
+g++ -I&amp;#34;d:/devtools/boost_1_54_0/&amp;#34; -I&amp;#34;d:/devtools/python27/include/&amp;#34; -&lt;span class=&#34;caps&#34;&gt;DMS&lt;/span&gt;_WIN64 -c wrap.cpp
+g++ -shared -o example.pyd wrap.o -L&amp;#34;d:/devtools/boost_1_54_0/stage/lib&amp;#34; -L&amp;#34;d:/devtools/python27/libs&amp;#34; -lboost_python-mgw48-mt-1_54 -lpython27
+cp d:/devtools/boost_1_54_0/stage/lib/libboost_python-mgw48-mt-1_54.dll .
+python
+&amp;gt;&amp;gt;&amp;gt;    from example import *
+&lt;/pre&gt;
+
+	&lt;p&gt;note for static libs use -&lt;span class=&#34;caps&#34;&gt;DBOOST&lt;/span&gt;_PYTHON_STATIC_LIB&lt;/p&gt;
+
+	&lt;p&gt;useful articles:
+	&lt;ol&gt;
+		&lt;li&gt;&lt;a href=&#34;http://www.boost.org/doc/libs/1_54_0/libs/python/doc/building.html&#34;&gt;http://www.boost.org/doc/libs/1_54_0/libs/python/doc/building.html&lt;/a&gt;&lt;/li&gt;
+		&lt;li&gt;http://sourceforge.net/apps/trac/mingw-w64/wiki/Building%20Boost&lt;/li&gt;
+		&lt;li&gt;&lt;a href=&#34;http://wiki.python.org/moin/boost.python/BuildingExtensions&#34;&gt;http://wiki.python.org/moin/boost.python/BuildingExtensions&lt;/a&gt;&lt;/li&gt;
+		&lt;li&gt;&lt;a href=&#34;http://stackoverflow.com/questions/11182765/how-can-i-build-my-c-extensions-with-mingw-w64-in-python&#34;&gt;http://stackoverflow.com/questions/11182765/how-can-i-build-my-c-extensions-with-mingw-w64-in-python&lt;/a&gt;&lt;/li&gt;
+		&lt;li&gt;&lt;a href=&#34;http://stackoverflow.com/questions/2842469/python-undefined-reference-to-imp-py-initmodule4&#34;&gt;http://stackoverflow.com/questions/2842469/python-undefined-reference-to-imp-py-initmodule4&lt;/a&gt;&lt;/li&gt;
+		&lt;li&gt;&lt;a href=&#34;http://stackoverflow.com/questions/14090683/compile-some-code-with-boost-python-by-mingw-in-win7-64bit&#34;&gt;http://stackoverflow.com/questions/14090683/compile-some-code-with-boost-python-by-mingw-in-win7-64bit&lt;/a&gt;&lt;/li&gt;
+	&lt;/ol&gt;&lt;/p&gt;
+
+	&lt;p&gt;examples (in russian):
+	&lt;ol&gt;
+		&lt;li&gt;&lt;a href=&#34;http://habrahabr.ru/post/168083/&#34;&gt;http://habrahabr.ru/post/168083/&lt;/a&gt;&lt;/li&gt;
+		&lt;li&gt;&lt;a href=&#34;http://habrahabr.ru/post/168233/&#34;&gt;http://habrahabr.ru/post/168233/&lt;/a&gt;&lt;/li&gt;
+	&lt;/ol&gt;&lt;/p&gt;
+
+</content>
+  </entry>
+
+  <entry>
+    <id>http://alexadotlife.com/blog/2013/03/27/pil-on-win64/</id>
+    <title type="html">PIL in virtualenv on windows x64</title>
+    <updated>2013-03-27T00:00:00Z</updated>
+    <published>2013-03-27T00:00:00Z</published>
+    <category term="python"></category>
+    <link href="http://alexadotlife.com/blog/2013/03/27/pil-on-win64/" rel="alternate"></link>
+    <content type="html">
+
+	&lt;h2&gt;in short:&lt;/h2&gt;
+
+	&lt;ol&gt;
+		&lt;li&gt;need to build zlib and jpeglib by using x64 compilers from VS2012&lt;/li&gt;
+		&lt;li&gt;edit setup.py of &lt;span class=&#34;caps&#34;&gt;PIL&lt;/span&gt;, and set *_ROOT variables to include/lib of zlib and libjpeg&lt;/li&gt;
+		&lt;li&gt;set VS90COMNTOOLS=%VS110COMNTOOLS%&lt;/li&gt;
+		&lt;li&gt;build &lt;span class=&#34;caps&#34;&gt;PIL&lt;/span&gt; by setuptools&lt;/li&gt;
+	&lt;/ol&gt;
+
+	&lt;h2&gt;in deep:&lt;/h2&gt;
+
+	&lt;h4&gt;Initial preparations:&lt;/h4&gt;
+
+	&lt;ul&gt;
+		&lt;li&gt;create new directory like d:\projects\mysite\local\thirdparty (under your virtualenv folder, presumably it is d:\projects\mysite\local)&lt;/li&gt;
+		&lt;li&gt;add subfolders &amp;#8216;include&amp;#8217; and &amp;#8216;lib&amp;#8217; to that folder (d:\projects\mysite\local\thirdparty\include and d:\projects\mysite\local\thirdparty\lib)&lt;/li&gt;
+	&lt;/ul&gt;
+
+	&lt;h4&gt;Build zlib:&lt;/h4&gt;
+
+	&lt;ul&gt;
+		&lt;li&gt;go to http://www.zlib.net/ and download latest source code (http://zlib.net/zlib127.zip)&lt;/li&gt;
+		&lt;li&gt;unpack package source to d:\temp\zlib-1.2.7&lt;/li&gt;
+		&lt;li&gt;run cmake-gui tool, set &amp;#8216;where is the sources&amp;#8217; to d:\temp\zlib-1.2.7 folder; set &amp;#8216;where is the binaries&amp;#8217; to d:\temp\zlib-1.2.7\_build folder&lt;/li&gt;
+		&lt;li&gt;click Configure &amp;#8211; create new folder &amp;#8211; yes. then choose &amp;#8216;Visual Studio 11 Win64&amp;#8217; from list.&lt;/li&gt;
+		&lt;li&gt;after configuration is over, click Generate&lt;/li&gt;
+		&lt;li&gt;open d:\temp\zlib-1.2.7\_build\zlib.sln solution by visual studio;&lt;/li&gt;
+		&lt;li&gt;make sure that Solution Platforms displays x64 platform&lt;/li&gt;
+		&lt;li&gt;choose Release from Solution Configuration dropdown;&lt;/li&gt;
+		&lt;li&gt;right-click on zlibstatic project, and click build&lt;/li&gt;
+		&lt;li&gt;after build is over, copy d:\temp\zlib-1.2.7\_build\Release\zlibstatic.lib to d:\projects\mysite\local\thirdparty\lib\zlib.lib (rename is critical)&lt;/li&gt;
+		&lt;li&gt;and copy zconf.h and zlib.h files from d:\temp\zlib-1.2.7\ to d:\projects\mysite\local\thirdparty\include\&lt;/li&gt;
+	&lt;/ul&gt;
+
+	&lt;h4&gt;Build libjpeg&lt;/h4&gt;
+
+	&lt;ul&gt;
+		&lt;li&gt;go to http://www.ijg.org/ and download latest source code (http://www.ijg.org/files/jpegsr9.zip)&lt;/li&gt;
+		&lt;li&gt;unpack package source to d:\temp\jpeg-9&lt;/li&gt;
+		&lt;li&gt;run cmd, and goto jpeg folder (prev created)&lt;/li&gt;
+		&lt;li&gt;execute &amp;#8220;&lt;span&gt;VS110COMNTOOLS&lt;/span&gt;\vsvars32.bat&amp;#8221; command line (it will setup VS environment) &amp;#8211; quotes around command are must.&lt;/li&gt;
+		&lt;li&gt;execute nmake /f makefile.vs setup-v10&lt;/li&gt;
+		&lt;li&gt;it will create d:\temp\jpeg-9\jpeg.sln solution file. &lt;span class=&#34;caps&#34;&gt;NOTE&lt;/span&gt;: it is a solution for VS2010. during the opening by VS2012, you will need to choose &amp;#8216;Upgrade project files&amp;#8217;.&lt;/li&gt;
+		&lt;li&gt;Select Configuration Manager.. option in Solutions Platforms dropdown&lt;/li&gt;
+		&lt;li&gt;In configuration manager dialog select New.. on solution plaform dropdown, and select x64 platform (and copy configuration from x86)..&lt;/li&gt;
+		&lt;li&gt;go away from configuration manager, make sure that Solution Platforms displays x64 platform.&lt;/li&gt;
+		&lt;li&gt;right-click jpeg project, and click build&lt;/li&gt;
+		&lt;li&gt;after build is over, copy d:\temp\jpeg-9\x64\Release\jpeg.lib to d:\projects\mysite\local\thirdparty\lib\jpeg.lib (name is the same)&lt;/li&gt;
+		&lt;li&gt;and copy jpeglib.h, jmorecfg.h, jerror.h, jconfig.h files from d:\temp\jpeg-9\ to d:\projects\mysite\local\thirdparty\include\&lt;/li&gt;
+	&lt;/ul&gt;
+
+	&lt;h4&gt;Build &lt;span class=&#34;caps&#34;&gt;PIL&lt;/span&gt;&lt;/h4&gt;
+
+	&lt;ul&gt;
+		&lt;li&gt;activate your virtualenv&lt;/li&gt;
+		&lt;li&gt;execute pip install &amp;#8212;no-install &lt;span class=&#34;caps&#34;&gt;PIL&lt;/span&gt;&lt;/li&gt;
+		&lt;li&gt;edit file d:\projects\mysite\local\build\PIL\setup.py&lt;/li&gt;
+		&lt;li&gt;in beginnig of configuration paths block (&lt;span class=&#34;caps&#34;&gt;JPEG&lt;/span&gt;_ROOT and etc), add &lt;span class=&#34;caps&#34;&gt;THIRDPARTY&lt;/span&gt; = libinclude(&amp;#8220;d:/projects/mysite/local/thirdparty/&amp;#8221;)&lt;/li&gt;
+		&lt;li&gt;and then set &lt;span class=&#34;caps&#34;&gt;JPEG&lt;/span&gt;_ROOT and &lt;span class=&#34;caps&#34;&gt;ZLIB&lt;/span&gt;_ROOT variables to &lt;span class=&#34;caps&#34;&gt;THIRDPARTY&lt;/span&gt; (like &lt;span class=&#34;caps&#34;&gt;JPEG&lt;/span&gt;_ROOT = &lt;span class=&#34;caps&#34;&gt;THIRDPARTY&lt;/span&gt;)&lt;/li&gt;
+		&lt;li&gt;execute &amp;#8220;set VS90COMNTOOLS=%VS110COMNTOOLS%&amp;#8221; (without quotes) in your virtualenv console&lt;/li&gt;
+		&lt;li&gt;and then finaly execute pip install &lt;span class=&#34;caps&#34;&gt;PIL&lt;/span&gt;&lt;/li&gt;
+	&lt;/ul&gt;
+
+	&lt;p&gt;If you see &amp;#8220;&lt;span class=&#34;caps&#34;&gt;JPEG&lt;/span&gt; support available&amp;#8221; and &amp;#8220;&lt;span class=&#34;caps&#34;&gt;ZLIB&lt;/span&gt; (&lt;span class=&#34;caps&#34;&gt;PNG&lt;/span&gt;/ZIP) support available&amp;#8221; then everything is ok. congratulations!&lt;/p&gt;
+
+	&lt;h4&gt;notes:&lt;/h4&gt;
+
+	&lt;ol&gt;
+		&lt;li&gt;I do not need to support tiff images, and freetype.. but I guess the same approach will work for them too.&lt;/li&gt;
+		&lt;li&gt;I use python 2.7 &amp;#215;64 here (and my system is win7 64)&lt;/li&gt;
+		&lt;li&gt;cmake version is 2.8.10&lt;/li&gt;
+		&lt;li&gt;to build x64 libraries you will need VisualStudio professional edition (not Express)&lt;/li&gt;
+		&lt;li&gt;if you want to build 32-bit (for 32-bit python installation) then you can use VS Express, the steps are the same (except you don&amp;#8217;t need to create x64 build targets)&lt;/li&gt;
+		&lt;li&gt;I use VisualStudio 2012 (the same should work for 2010 and 2008 editions at least, with minor changes in steps)&lt;/li&gt;
+		&lt;li&gt;I use static libraries here. If you want to use shared libraries, then you need to build different target in zlib, and adjust configuration of jpeglib; copy lib import files as described above; and you need to copy generated dll-files to local\Scripts folder (because it is in path variable).&lt;/li&gt;
+	&lt;/ol&gt;
+
+</content>
+  </entry>
+
+  <entry>
+    <id>http://alexadotlife.com/blog/2013/02/18/more-activity/</id>
+    <title type="html">One life up</title>
+    <updated>2013-02-18T00:00:00Z</updated>
+    <published>2013-02-18T00:00:00Z</published>
+    <category term="life"></category>
+    <link href="http://alexadotlife.com/blog/2013/02/18/more-activity/" rel="alternate"></link>
+    <content type="html">
+
+	&lt;p&gt;Have a long time no post in this blog. No, I have not abandoned this site. Yes, no free time to write something. Now I have enough time space to continue writing my thoughts :)&lt;/p&gt;
+
+	&lt;p&gt;What was happened? Hard-hard-working of course, to raise a lot of money, to increase experience level, to make life interesting. During last year, the second part of it, I have relocated to Europe, to Germany. I passed a ton of bureaucracy blanks and checks. And I was successful. The bad thing is in that I have no legal work permit in Germany, and I have limited visa. But it can&amp;#8217;t stop me for work as outsources and freelancer. Job is an activity, and not a place. It is like a rest for me, and working as performer is very applicable. Life is a joy, and coding is my hobby and favourite activity. &lt;/p&gt;
+
+	&lt;p&gt;What is happening? As for programming, c++ is all for me now. I am very happy about that. My current job is a proprietary game engine, its products will be released soon &amp;#8211; so more info in future (I hope). On opensource front I produce some experiments with Negine (my homemade game engine), have a lot of ideas to implement in nearest future. Current progress is not suitable for any usage, but I think about some real word applications on that engine. Also there is some stuff with python/django web development &amp;#8211; I think I will release new site in this month (more info after release :D). And there is no more m$ft .net stack, as you can see &amp;#8211; a lot of happiness!&lt;/p&gt;
+
+	&lt;p&gt;I have a new tiny hobby &amp;#8211; photography. It is not usual: low-res photos from mobile devices. Food and drinks, textures and crazy pics. Everything is posted in instagram, and cross posted to tumblr page, and stored in flickr. Have no idea why it is interesting for me. Checkout my photos here: &lt;a href=&#34;http://valexey.tumblr.com&#34;&gt;valexey.tumblr.com&lt;/a&gt; Actually I do not like photography due to its limitations &amp;#8211; camera weights and takes a lot of space in baggage, requires good charging source, need a computer to edit/post photos, bad pictures takes a lot of storage (and I am very lazy to do clean up).. Mobile produces low res photos, mobile is always in hands, it charges from any usb, gprs provides 24/7 online status, instagram and other camera software provides basic editing options. So forget about camera device.&lt;/p&gt;
+
+	&lt;p&gt;Also I become true &lt;span class=&#34;caps&#34;&gt;MAC&lt;/span&gt; user. I&amp;#8217;m not a &lt;span class=&#34;caps&#34;&gt;MAC&lt;/span&gt; freak. Win/MAC/Unix machines are around me ;) Will write about my mac experience in later posts.&lt;/p&gt;
+
+	&lt;p&gt;Finally, happy birthday me, lol&lt;/p&gt;
+
+</content>
+  </entry>
+
+  <entry>
+    <id>http://alexadotlife.com/blog/2012/04/15/cpp-lambda/</id>
+    <title type="html">Minimalistic C++ lambda</title>
+    <updated>2012-04-15T00:00:00Z</updated>
+    <published>2012-04-15T00:00:00Z</published>
+    <category term="c++"></category>
+    <link href="http://alexadotlife.com/blog/2012/04/15/cpp-lambda/" rel="alternate"></link>
+    <content type="html">
+
+	&lt;p&gt;Some time ago my comrade asked me to help him with one C++ issue. There is the original description:&lt;/p&gt;
+
+	&lt;p&gt;&lt;em&gt;The following program calculates a product of an array. Please add missing definitions, classes, and objects, so that the program could be compiled and could return correct result. It is required to use only standard template library of C++.&lt;/em&gt; &lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;int main ()
+{
+    int v[] = { 1, 2, 3, 4, 5 };
+    unsigned long m = 1;
+    std::for_each (v, v+5, var(m) = var(m) * _1);
+    std::cout &amp;lt;&amp;lt; &amp;#34;m=&amp;#34; &amp;lt;&amp;lt; m &amp;lt;&amp;lt; std::endl;
+    return 0;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+	&lt;p&gt;My first thought was &amp;#8216;this is a boost lambda sytax&amp;#8217;, and &amp;#8216;boost is an almost standard&amp;#8217;. So it is needed only to add boost lambda library (thankful it is completly header-only library), and the following code should be added to the beginning of program:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;#include &amp;lt;iostream&amp;gt;
+#include &amp;lt;algorithm&amp;gt;
+#include &amp;lt;boost/lambda/lambda.hpp&amp;gt;
+using namespace boost::lambda;
+&lt;/code&gt;&lt;/pre&gt;
+
+	&lt;p&gt;But&amp;#8230; this solution has been rejected with notice &amp;#8216;only standard templates library (&lt;span class=&#34;caps&#34;&gt;STL&lt;/span&gt;) should be used, no boost, no c++11..&amp;#8217;. Sadly. After several unsuccessful attempts to compact boost lambda code, I&amp;#8217;ve ended up with very basic template-based metaprogramming solution (in other words &amp;#8211; completely simple functors) to solve only this issue. Here my code:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;#include &amp;lt;iostream&amp;gt;
+#include &amp;lt;algorithm&amp;gt;
+&lt;/code&gt;
+&lt;code&gt;//! Placeholder variable
+//! returns value of actor
+struct Placeholder {
+    template&amp;lt; typename Type &amp;gt;
+    Type operator()( const Type&amp;amp; val ) const { return val; }
+};
+//! Global defined placeholder
+//! it should be initialized before expression
+Placeholder _1;
+&lt;/code&gt;
+&lt;code&gt;//! Single constant
+//! store constant value, and return it in action
+struct Constant {
+private:
+    int _value;
+public:
+    Constant( const int&amp;amp; value ) : _value( value ) {}
+    int operator()( const int&amp;amp; value ) const { return _value; }
+};
+&lt;/code&gt;
+&lt;code&gt;//! Multiplication of two functors
+//!
+template&amp;lt; typename FirstType, typename SecondType &amp;gt;
+struct Prod {
+private:
+    FirstType _first;
+    SecondType _second;
+public:
+    Prod( const FirstType&amp;amp; first, const SecondType&amp;amp; second )
+        : _first( first ), _second( second ) {}
+    template&amp;lt; typename Type &amp;gt;
+    Type operator()( const Type&amp;amp; t ) const { return _first(t) * _second(t); }
+};
+&lt;/code&gt;
+&lt;code&gt;//! Equals
+//!
+template&amp;lt; typename FirstType, typename SecondType &amp;gt;
+struct Eq {
+private:
+    FirstType _first;
+    SecondType _second;
+public:
+    Eq( const FirstType&amp;amp; first, const SecondType&amp;amp; second )
+        : _first( first ), _second( second ) {}
+    template&amp;lt; typename Type &amp;gt;
+    Type operator()(const Type&amp;amp; t) const { return _first(t) = _second(t); }
+};
+&lt;/code&gt;
+&lt;code&gt;//! Argument
+//! 
+template&amp;lt;typename Type&amp;gt;
+struct Arg {
+private:
+    Type&amp;amp; _t;
+public:
+    explicit arg(Type&amp;amp; t) : _t(t) {}
+    template&amp;lt; typename ActorType &amp;gt;
+    Type&amp;amp; operator()(const ActorType&amp;amp;) const {
+        return _t;
+    }
+    //! x * y
+    template&amp;lt; typename ActorType &amp;gt;
+    Prod&amp;lt; Arg&amp;lt;Type&amp;gt;, ActorType &amp;gt; operator*(const ActorType&amp;amp; p) const {
+        return Prod&amp;lt; Arg&amp;lt;Type&amp;gt;, ActorType &amp;gt;( Arg&amp;lt;Type&amp;gt;( _t ), p );
+    }
+    //! x * 5
+    Prod&amp;lt; Arg&amp;lt;Type&amp;gt;, Constant &amp;gt; operator*( const int&amp;amp; p ) const {
+        return Prod&amp;lt;Arg&amp;lt;Type&amp;gt;, Constant &amp;gt;( Arg&amp;lt;Type&amp;gt;( _t ), Constant( p ) );
+    }
+    //! x = y
+    template&amp;lt;typename ActorType&amp;gt;
+    Eq&amp;lt; Arg&amp;lt;Type&amp;gt;, ActorType&amp;gt; operator=( const ActorType&amp;amp; p ) const {
+        return eq&amp;lt; arg&amp;lt;Type&amp;gt;, ActorType &amp;gt;( Arg&amp;lt;Type&amp;gt;( _t ), p );
+    }
+    //! x = 5
+    Eq&amp;lt; Arg&amp;lt;Type&amp;gt;, Constant&amp;gt; operator=( const int&amp;amp; p ) const {
+        return Eq&amp;lt; Arg&amp;lt;T&amp;gt;, Constant &amp;gt;( Arg&amp;lt;Type&amp;gt;( _t ), Constant( p ) );
+    }
+};
+typedef Arg&amp;lt;unsigned long&amp;gt; var;
+&lt;/code&gt;&lt;/pre&gt;
+
+	&lt;p&gt;I don&amp;#8217;t have an answer from my comrade but it seems that solution is right. It is a good practice in C++ metaprogramming, and at least I have got minimalistic c++ lambda library. This code could be expanded to other math operations, and etc. I will be happy if this small library help anybody.&lt;/p&gt;
+
+</content>
+  </entry>
+
+  <entry>
+    <id>http://alexadotlife.com/blog/2011/10/30/what-tools-do-i-use/</id>
+    <title type="html">What tools do I use</title>
+    <updated>2011-10-30T00:00:00Z</updated>
+    <published>2011-10-30T00:00:00Z</published>
+    <category term="tools"></category><category term="life"></category>
+    <link href="http://alexadotlife.com/blog/2011/10/30/what-tools-do-i-use/" rel="alternate"></link>
+    <content type="html">
+
+	&lt;p&gt;Делаем блог именно блогом. Вот список тулзов и сайтов которые я более менее постоянно использую:&lt;/p&gt;
+
+	&lt;p&gt;sites:
+	&lt;ol&gt;
+		&lt;li&gt;&lt;a href=&#34;http://www.urbandictionary.com/&#34;&gt;urban dictionary&lt;/a&gt; &amp;#8211; словарь сленга, помогает иногда сильно в общении с &lt;i&gt;двинутыми&lt;/i&gt; людьми&lt;/li&gt;
+		&lt;li&gt;&lt;a href=&#34;http://translate.google.com/&#34;&gt;google translate&lt;/a&gt; &amp;#8211; переводчик, в основном использую для перевода отдельных слов&lt;/li&gt;
+		&lt;li&gt;&lt;a href=&#34;http://pastebin.com/&#34;&gt;pastebin.com&lt;/a&gt; &amp;#8211; удобная штука для сохранения и пересылки кусков текста, особенно удобна наличием подсветки синтаксиса языков программирования&lt;/li&gt;
+		&lt;li&gt;&lt;a href=&#34;http://www.strikeapp.com&#34;&gt;strike&lt;/a&gt; &amp;#8211; todo лист&lt;/li&gt;
+		&lt;li&gt;&lt;a href=&#34;http://reader.google.com/&#34;&gt;google reader&lt;/a&gt; &amp;#8211; rss агрегатор, единственный минус &amp;#8211; не умеет читать закрытые каналы, их читаю через thunderbird&lt;/li&gt;
+		&lt;li&gt;&lt;a href=&#34;http://gramota.ru/&#34;&gt;грамота.ру&lt;/a&gt; &amp;#8211; правописание русского языка, куча правил, и тп. например там есть такое &amp;#8211; &lt;a href=&#34;http://gramota.ru/spravka/punctum/punctum_alphabet/&#34;&gt;список вводных слов&lt;/a&gt;&lt;/li&gt;
+		&lt;li&gt;&lt;a href=&#34;http://prezi.com/&#34;&gt;презентации&lt;/a&gt; &amp;#8211; создание красивых презентаций&lt;/li&gt;
+		&lt;li&gt;&lt;a href=&#34;http://podfm.ru/&#34;&gt;русскоязычные подкасты&lt;/a&gt; &amp;#8211; узнать новости&lt;/li&gt;
+		&lt;li&gt;&lt;a href=&#34;http://time.is/&#34;&gt;точное время&lt;/a&gt; &amp;#8211; простой сервис узнавания точного времени, очень простой&lt;/li&gt;
+		&lt;li&gt;&lt;a href=&#34;http://kuking.net/&#34;&gt;kuking.net&lt;/a&gt; &amp;#8211; еда, рецепты&lt;/li&gt;
+	&lt;/ol&gt;&lt;/p&gt;
+
+	&lt;p&gt;soft:
+	&lt;ol&gt;
+		&lt;li&gt;chrome &amp;#8211; браузер&lt;/li&gt;
+		&lt;li&gt;sublime text 2 &amp;#8211; редактор текста и кода, минимальный &lt;span class=&#34;caps&#34;&gt;IDE&lt;/span&gt;, оконный&lt;/li&gt;
+		&lt;li&gt;pyroom &amp;#8211; редактор текста, просто текста, очень минималистичный&lt;/li&gt;
+		&lt;li&gt;terminator &amp;#8211; консолька для линуха, с замечательной функцией сплита экрана (и одновременным вводом в несколько экранов)&lt;/li&gt;
+		&lt;li&gt;docky &amp;#8211; увиличивает площадь экрана, для гнома&lt;/li&gt;
+		&lt;li&gt;keypassx &amp;#8211; менеджер паролей&lt;/li&gt;
+		&lt;li&gt;python &amp;#8211; калькулятор&lt;/li&gt;
+		&lt;li&gt;synergy+ &amp;#8211; шаринг клавиатуры и мыши между компами&lt;/li&gt;
+		&lt;li&gt;skype &amp;#8211; instant messenger&lt;/li&gt;
+		&lt;li&gt;7zip &amp;#8211; архиватор&lt;/li&gt;
+		&lt;li&gt;mplayer &amp;#8211; видео-аудио плейер&lt;/li&gt;
+		&lt;li&gt;rhythmbox &amp;#8211; аудио плейер, слушаю радио, только линух&lt;/li&gt;
+		&lt;li&gt;winamp &amp;#8211; аудио плейер под винду&lt;/li&gt;
+		&lt;li&gt;total commander &amp;#8211; файловый менеджер под винду, к нему идет офигенный просмотрщик текста-графики, есть мердж текста&lt;/li&gt;
+		&lt;li&gt;thunderbird &amp;#8211; почтовый клиент, рсс читалка, тормозной, но лучше нету&lt;/li&gt;
+		&lt;li&gt;&lt;a href=&#34;http://www.omgubuntu.co.uk/2010/07/flux-natural-lighting-for-ubuntu-gets.html&#34;&gt;flux&lt;/a&gt; &amp;#8211; изменяет цветовую теплоту монитора под время дня&lt;/li&gt;
+		&lt;li&gt;ffmpeg &amp;#8211; транскодер всего&lt;/li&gt;
+		&lt;li&gt;easytag &amp;#8211; редактирование мета данных в аудио файлах&lt;/li&gt;
+	&lt;/ol&gt;&lt;/p&gt;
+
+	&lt;p&gt;programming (home edition):
+	&lt;ol&gt;
+		&lt;li&gt;mercurial &amp;#8211; контроль версий&lt;/li&gt;
+		&lt;li&gt;&lt;a href=&#34;http://code.google.com/p/rest-client/&#34;&gt;rest-client&lt;/a&gt; &amp;#8211; тулза для отладки веб-сервисов&lt;/li&gt;
+		&lt;li&gt;trac &amp;#8211; баг-трек, вики&lt;/li&gt;
+		&lt;li&gt;tiddly-wiki &amp;#8211; локальная вики, минимализм&lt;/li&gt;
+		&lt;li&gt;cmake &amp;#8211; построение проектов (плюсовые)&lt;/li&gt;
+		&lt;li&gt;virtualenv &amp;#8211; виртуальное окружение под пайтон&lt;/li&gt;
+		&lt;li&gt;sublime text 2 &amp;#8211; минимальный &lt;span class=&#34;caps&#34;&gt;IDE&lt;/span&gt;&lt;/li&gt;
+		&lt;li&gt;doxygen &amp;#8211; документация для плюсовых проектов&lt;/li&gt;
+		&lt;li&gt;swig &amp;#8211; враппер кода для плюсов&lt;/li&gt;
+		&lt;li&gt;nginx &amp;#8211; веб-сервер&lt;/li&gt;
+		&lt;li&gt;putty &amp;#8211; ssh клиент под винду&lt;/li&gt;
+		&lt;li&gt;virtualbox &amp;#8211; виртуальные машины&lt;/li&gt;
+	&lt;/ol&gt;&lt;/p&gt;
+
+</content>
+  </entry>
+
+</feed>

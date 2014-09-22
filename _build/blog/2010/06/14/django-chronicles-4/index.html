@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="author" content="" />
+    <meta name="keywords" lang="en" content="homepage, alexey vasilyev, c++, developer, cv" />
+    <title>alexa.life : хроники django или homebudget part 4</title>
+    <link rel="icon" href="/static/icons/favicon.ico"/>
+    <link href="/static/css/bootstrap.css" rel="stylesheet">
+    <link href="/static/css/bootstrap-responsive.css" rel="stylesheet">
+    <link href="http://alexadotlife.com/feed.atom" rel="alternate" title="alexa.life" type="application/atom+xml" /> 
+    <script type="text/javascript" src="/static/js/jquery-1.8.0.min.js"></script>
+    
+  <link rel="stylesheet" href="/static/css/tomorrow.css">
+  <script type="text/javascript" src="/static/js/prettify.js"></script>
+  <script type="text/javascript">
+    $(document).ready(function() {
+        $('pre, code').addClass("prettyprint");
+        $('pre code').removeClass("prettyprint");
+        prettyPrint();
+    });
+  </script>
+
+    
+<link rel="stylesheet" href="/static/css/pygments.css">
+
+    <style type="text/css">
+      html { min-height: 100%; position: relative; }
+      body { margin-bottom: 65px; }
+      .footer { position: absolute; bottom: 0; width: 100%; height: 65px; text-align: center; }
+      .content-title { display: none; margin-bottom: 42px; } 
+      .content { max-width: 900px; margin: 48px auto; padding: 0 40px; }
+      .site-header { float: left; left: 0; }
+      .site-navi { float: right; right: 0; }
+      .site-navi ul { list-style: none; margin: 0; padding: 0; }
+      .site-navi ul li { display: inline; margin: 0 2px; padding: 0; }
+      .site-navi ul li a { font-size: 18px; line-height: 27px; font-weight: bold; }
+      
+  .content-title { display: block; }
+  .post-title { margin-bottom: 25px; }
+
+      
+    </style>
+  </head>
+  <body>
+    <div class="content container">
+      <div class="content-title">
+        <div class="site-header">
+          <h3><a href="http://alexadotlife.com/">Alexey Vasilyev</a>'s Thoughts and Writings</h3>
+        </div><!--site-header-->
+        <div class="site-navi">
+          <ul>
+            <li><a href="/blog/">Blog</a></li>
+            <li><a href="/">About</a></li>
+          </ul>
+        </div><!--site-navi-->
+      </div><!--content-title-->
+      
+  <div class="post-title">
+    <h1>хроники django или homebudget part 4</h1>
+    <i>Published: 2010, June 14</i>
+  </div><!--post-title-->
+  
+	<p>Выдалось время и появилось настроение. Чего-то нового сваял :)
+	<ol>
+		<li>Первой целью стояло добавление тагов. Очень полезная вещь для организации однотипных данных. Посмотрел что предлагает интернет на этот вопрос. Есть проект django-tagging, типа все готовое прямо из коробки под джангу. Не понравился по нескольким причинам &#8211; я не понял как он работает (какие-то мега-архи приемы используются для управления тагами, типа прямых запросов к бд), куча не нужных мне наворотов, находится он бете и имеет баг лист, да и народ от него не в восторге. Вообще вопрос построения тагов теоретически выглядит довольно простым &#8211; так что было решено отказаться и самому написать простенькое решение, для целей самообучения имхо лучше. Когда понадобится облако тагов &#8211; я подумаю в сторону перехода на сей стандартный плагин. Мое требование такое &#8211; чтобы было одно поле на форме, в котором записаны все таги итема через пробел, при сохранении это поле split-ится по пробелам, и к итему добавляются/убираются теги. Как узналось в процессе &#8211; это de.li.cious style таги.</li>
+		<li>Отправной точкой является модель тага <pre class="prettyprint lang-python">
+class Tag(models.Model):
+    name = models.CharField(&#39;keyword, bookmark or term&#39;, max_length=100)
+</pre> и отношение many-to-many к модели purchase <pre class="prettyprint lang-python">
+class Purchase(models.Model):
+    ...
+    tags = models.ManyToManyField(&#39;Tag&#39;)
+</pre></li>
+		<li>Обновляем схему базы. У нас появляется новая таблица Тагов, и таблица отношения таг-покупка (по foreign-ключам из тагов и покупок). Нужно заметить что таблица PurchaseItem не меняется, значит все правильно.</li>
+		<li>Таким образом получилась следующая штука, которую лучше всего опробовать на shell-е: <pre class="prettyprint lang-python">
+from homebudget.purchases.models import Purchase, Tag
+t = Tag(name=&#39;beer&#39;)
+t.save()
+p = Purchase.objects.filter(name=u&#39;туборг&#39;)[0]
+p.tags.add(t)
+p.save()
+[i.name for i in p.tags.all()]
+[i.name for i in t.purchases_set.all()]
+</pre> Нужно заметить, что пока объект Purchase не материализован (не сохранен) в базе, у него нет поля tags. И наоборот, пока Tag не создан в базе у него нет поля purchases_set.</li>
+		<li>Если сейчас оставить все как есть и посмотреть что находится на вьюхах добавления и редактирования, то может стать плохо. Так как я использовал ModelForm для генерации html-формы для Purchase &#8211; для всех полей подставилась стандартная реализация. И для поля ManyToManyField она тоже есть, и выглядит прям отвратительно (тупой селект). Минусы &#8211; совершенно не подходит под мое представление, и добавить новый тег &#8211; нужна отдельная форма. Так что нах стандарты!</li>
+		<li>В PurchaseItemForm добавляем новое <i>собственное</i> поле, и удаляем из представление оригинальное поле tag модели PurchaseItem <pre class="prettyprint lang-python">
+from django.forms import CharField
+class PurchaseItemForm(ModelForm):
+    ...
+    tags_inner = CharField()
+    ...
+    class Meta:
+        model = Purchase
+        exclude = (&#39;tags&#39;,)
+</pre></li>
+		<li><i>Правильное</i> поле есть, но оно никак не обрабатывается. Сначала мы его заполним данными. Как мне кажется &#8211; лучше всего это сделать через override функции <i>init</i> формы. Сначала вызываем родной <i>init</i> (в котором как мы сделали &#8211; уже нет оригинального поля tags), потом заполняем собственное поле tags_inner тагами, разделенными пробелами. Проверка на null-ы нужна как раз для создания и редактирования (пока объект Purchase не создан, у него нет поля tags). <pre class="prettyprint lang-python">
+class PurchaseItemForm(ModelForm):
+    ...
+    def __init__(self, *args, **kwargs):
+        super(PurchaseItemForm, self).__init__(*args, **kwargs)
+        if kwargs.has_key(&#39;instance&#39;):
+            inst = kwargs[&#39;instance&#39;]
+            if inst is not None and inst.pk is not None:
+                self.fields[&#34;tags_inner&#34;].initial = &#34; &#34;.join(
+                    [i.name for i in inst.tags.all()]
+                )
+</pre></li>
+		<li>Теперь сохранение. Я выбрал решение через override функции save (которая вызывается при сохранении данных формы из вьюхи). Сначала &#8211; обязательно вызываем базовый метод (чтобы объект Purchase наверняка сохранился в базе), потом &#8211; вытаскиваем из cleaned_data значения поля tags_inner. Далее понятные операции &#8211; split по пробелам, получаем все таги буквенно, потом создаем новые, удаляем несуществующие, и сохраняем финально. <pre class="prettyprint lang-python">
+def save(self, *args, **kwargs):
+    inst = super(PurchaseItemForm, self).save(*args, **kwargs)
+    tags = self.cleaned_data[&#34;tags_inner&#34;].strip().split(&#39; &#39;)
+    for tag in tags:
+        if len(Tag.objects.filter(name=tag))0:
+            new_tag = Tag(name=tag)
+            new_tag.save()
+        if len(inst.tags.filter(name=tag))==0:
+            inst.tags.add(Tag.objects.get(name=tag))
+    for tag in inst.tags.all():
+        if tag.name not in tags:
+            inst.tags.remove(tag)
+    inst.save()<br />
+</pre>
+# Ну вроде бы с реализацией все - можно пробовать. Какие минусы сейчас есть: отсутствует валидация, отсутствует зачистка тагов к которым не привязан не один итем, поле tags теперь обязательное для заполнения, решение деревянное и не гибкое. Запишу в todo :) А пока нужно наполнить тагам базу.
+# После того как база заполнена можно сделать вьюху для просмотра статистики по тагам. Во views.py добавляем purchases_by_tag <pre class="prettyprint lang-python"><br />
+def purchases_by_tag(request, tag_name):
+    try:
+        tag = Tag.objects.get(name=tag_name)
+    except:
+        raise Http404
+    total = Decimal(&#39;0.0&#39;)
+    for item in tag.purchase_set.all():
+        total += item.price_total
+    return render_to_response(&#39;purchases/tag_view.html&#39;, {
+        &#39;total&#39;: total,
+        &#39;tag&#39;: tag,
+    })<br />
+</pre> Добавляем новый темплейт tag_view.html <pre class="prettyprint lang-django"></li>
+	</ol></p>
+
+	<p>&lt;p&gt;Tag: {{tag.name}}&lt;/p&gt;<br />
+&lt;ul&gt;
+    {% for item in tag.purchase_set.all %}
+        &lt;li&gt;
+            {{item.name}}
+            &lt;b&gt;{{item.price_total}}&lt;/b&gt;
+            {{item.purchase_date}}
+            &lt;a href=&#39;/purchases/edit/{{item.pk}}/&#39;&gt;Edit&lt;/a&gt;
+        &lt;/li&gt;
+    {% endfor %}<br />
+&lt;/ul&gt;<br />
+&lt;p&gt;Count: {{tag.purchase_set.count}}&lt;/p&gt;<br />
+&lt;p&gt;Total: {{total}}&lt;/p&gt;</p>
+
+	<p></pre> Добавляем новое правило урлов в urls.py: <pre class="prettyprint lang-python"><br />
+urlpatterns = patterns(
+    &#8230;
+    (r&#39;^purchases/tags/(?P&lt;tag_name&gt;\w+)/$&#39;, &#39;purchases_by_tag&#39;),<br />
+)<br />
+</pre> Теперь по ссылке http://127.0.0.1:8000/purchases/tags/beer/ можно узнать когда, и на какую в сумму мы выпили пива :)
+# Можно навести красивости, типа в daily view добавить в каждую строчку таги связанные с покупкой, типа <pre class="prettyprint lang-django"></p>
+
+	<p>Tags:
+   {% for tag in p.tags.all %}
+   &lt;span&gt;{{tag.name}}&lt;/span&gt;
+   {% endfor %}</p>
+
+	<p></pre>
+# Для реализации тагов мне в один момент понадобился дебаг, использовал для этого модуль logging, очень удобный надо сказать, вот так его заставить работать (output идет в консоль локального сервера, что архи удобно): <pre class="prettyprint lang-python"><br />
+import logging<br />
+logging.basicConfig(
+    level = logging.DEBUG,
+    format = &#39;%(asctime)s %(levelname)s %(message)s&#39;,<br />
+)<br />
+</pre> а вот так легко использовать: <pre class="prettyprint lang-python"><br />
+logging.debug(p.tags)<br />
+</pre>
+# Еще по мелочам, из области рефакторинга, наткнулся на мега функцию locals - она возвращает все локальные переменные из области видимости, в виде словаря 'имя переменной'-'значение'. Это позволило значительно сократить код на render_to_response, до: <pre class="prettyprint lang-python"><br />
+return render_to_response(&#39;purchases/month_view.html&#39;, {
+    &#39;view_date&#39;: view_date,
+    &#39;dict&#39;: day_price,
+    &#39;total&#39;: month_total,<br />
+})<br />
+</pre> после: <pre class="prettyprint lang-python"><br />
+return render_to_response(&#39;purchases/month_view.html&#39;, locals())<br />
+</pre> И это в каждой вьюхе, очень удобно. Конечно же пришлось поправить все темплейты и вьюхи на предмет именования переменных, но так все таки намного лучше.
+# На последок добавил Master Page - по крайней мере так оно обзывается в ASP.NET. Нужно это для двух вещей - чтобы все страницы имели общую часть - в мастере, и чтобы меньше писать кода. После коротких поисков нашел что это в джанге реализуется через наследование темплейтов читать тут. В общем по простому: добавил master.html <pre class="prettyprint lang-django"></p>
+
+	<p>&lt;!DOCTYPE html <span class="caps">PUBLIC</span> &#34;-//W3C//DTD <span class="caps">XHTML</span> 1.0 Transitional//EN&#34; 
+    &#34;http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd&#34;&gt;<br />
+&lt;html xmlns=&#34;http://www.w3.org/1999/xhtml&#34; xml:lang=&#34;en&#34; lang=&#34;en&#34;&gt;<br />
+&lt;head&gt;
+    &lt;link rel=&#34;stylesheet&#34; href=&#34;content/css/main.css&#34; /&gt;
+    &lt;title&gt;Homebudget site: {% block title <span>} manage yourself {</span> endblock %}&lt;/title&gt;<br />
+{% block head <span>}{</span> endblock %}<br />
+&lt;/head&gt;<br />
+&lt;body&gt;<br />
+&lt;div id=&#34;content&#34;&gt;<br />
+{% block post_content %}<br />
+{% endblock %}<br />
+&lt;/div&gt;<br />
+&lt;/body&gt;<br />
+&lt;/html&gt;</p>
+
+	<p></pre> Теперь он будет у меня основным шаблоном. Любой другой шаблон может его расширять и дополнять. Все элементы block - можно использовать в дочернем шаблоне. Пока я полностью не разобрался, но то что есть сейчас меня устраивает. Вот например новый шаблон tag_view.html <pre class="prettyprint lang-django"></p>
+
+	<p>{% extends &#34;purchases/master.html&#34; %}<br />
+{% block title <span>} view purchases by tag {</span> endblock%}<br />
+{% block post_content %}<br />
+&lt;p&gt;Tag: {{tag.name}}&lt;/p&gt;<br />
+&lt;ul&gt;
+    {% for item in tag.purchase_set.all %}
+        &lt;li&gt;
+            {{item.name}}
+            &lt;b&gt;{{item.price_total}}&lt;/b&gt;
+            {{item.purchase_date}}
+            &lt;a href=&#39;/purchases/edit/{{item.pk}}/&#39;&gt;Edit&lt;/a&gt;
+        &lt;/li&gt;
+    {% endfor %}<br />
+&lt;/ul&gt;<br />
+&lt;p&gt;Count: {{tag.purchase_set.count}}&lt;/p&gt;<br />
+&lt;p&gt;Total: {{total}}&lt;/p&gt;<br />
+{% endblock %}</p>
+
+	<p></pre>
+# Кстати говоря, в мастере используется ссылка на css-документ, он должен лежать в папке обозначенной в конфигурации как MEDIA_ROOT, и для этого пути должно быть правило в урл-реврайтере... Для чего оно нужно? чтобы в можно было вынести весь статический контент в отдельный сайт, необремененный обработчиками джанги и тп. В settings.py: <pre class="prettyprint lang-python"><br />
+<span class="caps">MEDIA</span>_ROOT = &#39;/home/username/projects/homebudget/content/&#39;<br />
+&#8230;<br />
+<span class="caps">MEDIA</span>_URL = &#39;/content/&#39;<br />
+</pre> И в urls.py <pre class="prettyprint lang-python"><br />
+from django.conf import settings<br />
+if settings.LOCAL_DEVELOPMENT:
+    urlpatterns += patterns(&#34;django.views&#34;,
+        url(r&#34;%s(?P&lt;path&gt;.*)/$&#34; % settings.MEDIA_URL[1:], 
+            static.serve&#34;, { &#34;document_root&#34;: settings.MEDIA_ROOT, })
+    )<br />
+&lt;/path&gt;<br />
+</pre>==<br />
+Переменная <span class="caps">LOCAL</span>_DEVELOPMENT заведена на будующее.</p>
+
+
+    </div><!--content container-->
+    <div class="footer">
+      <div class="text-muted">
+        Copyright &copy; 2014 by Alexey Vasilyev
+
+        <div class="contacts">
+          Contact me via <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#108;&#105;&#103;&#104;&#116;&#46;&#112;&#97;&#114;&#116;&#105;&#99;&#108;&#101;&#64;&#121;&#97;&#110;&#100;&#101;&#120;&#46;&#99;&#111;&#109;">mail</a>, <a href="https://twitter.com/alexadotlife">twitter</a>, or <a href="https://github.com/alexa-infra">github</a>. More info: <a href="/">About</a>. (<a href="http://alexadotlife.com/feed.atom">feed</a>)
+        </div><!--contacts-->
+      </div>
+    </div><!--footer-->
+  </body>
+</html>

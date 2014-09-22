@@ -1,3 +1,2 @@
 glob:local/
 glob:__pycache__/*
-glob:_build/

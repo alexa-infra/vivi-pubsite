@@ -1,0 +1,6 @@
+.post { width: 100%; margin: 4px 0; float: left; }
+.postdate { margin-left: 2em; width: 200px; float: left; display:inline; }
+.postlink { float: left; display:inline;}
+.postlife { background: red; color: white; padding: 0 2px; margin-left: 10px; float: left; display:inline; }
+.clear { float: none; clear: both; }
+

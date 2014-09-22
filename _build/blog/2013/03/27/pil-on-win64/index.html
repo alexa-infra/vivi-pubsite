@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="author" content="" />
+    <meta name="keywords" lang="en" content="homepage, alexey vasilyev, c++, developer, cv" />
+    <title>alexa.life : PIL in virtualenv on windows x64</title>
+    <link rel="icon" href="/static/icons/favicon.ico"/>
+    <link href="/static/css/bootstrap.css" rel="stylesheet">
+    <link href="/static/css/bootstrap-responsive.css" rel="stylesheet">
+    <link href="http://alexadotlife.com/feed.atom" rel="alternate" title="alexa.life" type="application/atom+xml" /> 
+    <script type="text/javascript" src="/static/js/jquery-1.8.0.min.js"></script>
+    
+  <link rel="stylesheet" href="/static/css/tomorrow.css">
+  <script type="text/javascript" src="/static/js/prettify.js"></script>
+  <script type="text/javascript">
+    $(document).ready(function() {
+        $('pre, code').addClass("prettyprint");
+        $('pre code').removeClass("prettyprint");
+        prettyPrint();
+    });
+  </script>
+
+    
+    <style type="text/css">
+      html { min-height: 100%; position: relative; }
+      body { margin-bottom: 65px; }
+      .footer { position: absolute; bottom: 0; width: 100%; height: 65px; text-align: center; }
+      .content-title { display: none; margin-bottom: 42px; } 
+      .content { max-width: 900px; margin: 48px auto; padding: 0 40px; }
+      .site-header { float: left; left: 0; }
+      .site-navi { float: right; right: 0; }
+      .site-navi ul { list-style: none; margin: 0; padding: 0; }
+      .site-navi ul li { display: inline; margin: 0 2px; padding: 0; }
+      .site-navi ul li a { font-size: 18px; line-height: 27px; font-weight: bold; }
+      
+  .content-title { display: block; }
+  .post-title { margin-bottom: 25px; }
+
+      
+    </style>
+  </head>
+  <body>
+    <div class="content container">
+      <div class="content-title">
+        <div class="site-header">
+          <h3><a href="http://alexadotlife.com/">Alexey Vasilyev</a>'s Thoughts and Writings</h3>
+        </div><!--site-header-->
+        <div class="site-navi">
+          <ul>
+            <li><a href="/blog/">Blog</a></li>
+            <li><a href="/">About</a></li>
+          </ul>
+        </div><!--site-navi-->
+      </div><!--content-title-->
+      
+  <div class="post-title">
+    <h1>PIL in virtualenv on windows x64</h1>
+    <i>Published: 2013, March 27</i>
+  </div><!--post-title-->
+  
+	<h2>in short:</h2>
+
+	<ol>
+		<li>need to build zlib and jpeglib by using x64 compilers from VS2012</li>
+		<li>edit setup.py of <span class="caps">PIL</span>, and set *_ROOT variables to include/lib of zlib and libjpeg</li>
+		<li>set VS90COMNTOOLS=%VS110COMNTOOLS%</li>
+		<li>build <span class="caps">PIL</span> by setuptools</li>
+	</ol>
+
+	<h2>in deep:</h2>
+
+	<h4>Initial preparations:</h4>
+
+	<ul>
+		<li>create new directory like d:\projects\mysite\local\thirdparty (under your virtualenv folder, presumably it is d:\projects\mysite\local)</li>
+		<li>add subfolders &#8216;include&#8217; and &#8216;lib&#8217; to that folder (d:\projects\mysite\local\thirdparty\include and d:\projects\mysite\local\thirdparty\lib)</li>
+	</ul>
+
+	<h4>Build zlib:</h4>
+
+	<ul>
+		<li>go to http://www.zlib.net/ and download latest source code (http://zlib.net/zlib127.zip)</li>
+		<li>unpack package source to d:\temp\zlib-1.2.7</li>
+		<li>run cmake-gui tool, set &#8216;where is the sources&#8217; to d:\temp\zlib-1.2.7 folder; set &#8216;where is the binaries&#8217; to d:\temp\zlib-1.2.7\_build folder</li>
+		<li>click Configure &#8211; create new folder &#8211; yes. then choose &#8216;Visual Studio 11 Win64&#8217; from list.</li>
+		<li>after configuration is over, click Generate</li>
+		<li>open d:\temp\zlib-1.2.7\_build\zlib.sln solution by visual studio;</li>
+		<li>make sure that Solution Platforms displays x64 platform</li>
+		<li>choose Release from Solution Configuration dropdown;</li>
+		<li>right-click on zlibstatic project, and click build</li>
+		<li>after build is over, copy d:\temp\zlib-1.2.7\_build\Release\zlibstatic.lib to d:\projects\mysite\local\thirdparty\lib\zlib.lib (rename is critical)</li>
+		<li>and copy zconf.h and zlib.h files from d:\temp\zlib-1.2.7\ to d:\projects\mysite\local\thirdparty\include\</li>
+	</ul>
+
+	<h4>Build libjpeg</h4>
+
+	<ul>
+		<li>go to http://www.ijg.org/ and download latest source code (http://www.ijg.org/files/jpegsr9.zip)</li>
+		<li>unpack package source to d:\temp\jpeg-9</li>
+		<li>run cmd, and goto jpeg folder (prev created)</li>
+		<li>execute &#8220;<span>VS110COMNTOOLS</span>\vsvars32.bat&#8221; command line (it will setup VS environment) &#8211; quotes around command are must.</li>
+		<li>execute nmake /f makefile.vs setup-v10</li>
+		<li>it will create d:\temp\jpeg-9\jpeg.sln solution file. <span class="caps">NOTE</span>: it is a solution for VS2010. during the opening by VS2012, you will need to choose &#8216;Upgrade project files&#8217;.</li>
+		<li>Select Configuration Manager.. option in Solutions Platforms dropdown</li>
+		<li>In configuration manager dialog select New.. on solution plaform dropdown, and select x64 platform (and copy configuration from x86)..</li>
+		<li>go away from configuration manager, make sure that Solution Platforms displays x64 platform.</li>
+		<li>right-click jpeg project, and click build</li>
+		<li>after build is over, copy d:\temp\jpeg-9\x64\Release\jpeg.lib to d:\projects\mysite\local\thirdparty\lib\jpeg.lib (name is the same)</li>
+		<li>and copy jpeglib.h, jmorecfg.h, jerror.h, jconfig.h files from d:\temp\jpeg-9\ to d:\projects\mysite\local\thirdparty\include\</li>
+	</ul>
+
+	<h4>Build <span class="caps">PIL</span></h4>
+
+	<ul>
+		<li>activate your virtualenv</li>
+		<li>execute pip install &#8212;no-install <span class="caps">PIL</span></li>
+		<li>edit file d:\projects\mysite\local\build\PIL\setup.py</li>
+		<li>in beginnig of configuration paths block (<span class="caps">JPEG</span>_ROOT and etc), add <span class="caps">THIRDPARTY</span> = libinclude(&#8220;d:/projects/mysite/local/thirdparty/&#8221;)</li>
+		<li>and then set <span class="caps">JPEG</span>_ROOT and <span class="caps">ZLIB</span>_ROOT variables to <span class="caps">THIRDPARTY</span> (like <span class="caps">JPEG</span>_ROOT = <span class="caps">THIRDPARTY</span>)</li>
+		<li>execute &#8220;set VS90COMNTOOLS=%VS110COMNTOOLS%&#8221; (without quotes) in your virtualenv console</li>
+		<li>and then finaly execute pip install <span class="caps">PIL</span></li>
+	</ul>
+
+	<p>If you see &#8220;<span class="caps">JPEG</span> support available&#8221; and &#8220;<span class="caps">ZLIB</span> (<span class="caps">PNG</span>/ZIP) support available&#8221; then everything is ok. congratulations!</p>
+
+	<h4>notes:</h4>
+
+	<ol>
+		<li>I do not need to support tiff images, and freetype.. but I guess the same approach will work for them too.</li>
+		<li>I use python 2.7 &#215;64 here (and my system is win7 64)</li>
+		<li>cmake version is 2.8.10</li>
+		<li>to build x64 libraries you will need VisualStudio professional edition (not Express)</li>
+		<li>if you want to build 32-bit (for 32-bit python installation) then you can use VS Express, the steps are the same (except you don&#8217;t need to create x64 build targets)</li>
+		<li>I use VisualStudio 2012 (the same should work for 2010 and 2008 editions at least, with minor changes in steps)</li>
+		<li>I use static libraries here. If you want to use shared libraries, then you need to build different target in zlib, and adjust configuration of jpeglib; copy lib import files as described above; and you need to copy generated dll-files to local\Scripts folder (because it is in path variable).</li>
+	</ol>
+
+
+    </div><!--content container-->
+    <div class="footer">
+      <div class="text-muted">
+        Copyright &copy; 2014 by Alexey Vasilyev
+
+        <div class="contacts">
+          Contact me via <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#108;&#105;&#103;&#104;&#116;&#46;&#112;&#97;&#114;&#116;&#105;&#99;&#108;&#101;&#64;&#121;&#97;&#110;&#100;&#101;&#120;&#46;&#99;&#111;&#109;">mail</a>, <a href="https://twitter.com/alexadotlife">twitter</a>, or <a href="https://github.com/alexa-infra">github</a>. More info: <a href="/">About</a>. (<a href="http://alexadotlife.com/feed.atom">feed</a>)
+        </div><!--contacts-->
+      </div>
+    </div><!--footer-->
+  </body>
+</html>

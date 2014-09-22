@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="author" content="" />
+    <meta name="keywords" lang="en" content="homepage, alexey vasilyev, c++, developer, cv" />
+    <title>alexa.life : compiz headtracking</title>
+    <link rel="icon" href="/static/icons/favicon.ico"/>
+    <link href="/static/css/bootstrap.css" rel="stylesheet">
+    <link href="/static/css/bootstrap-responsive.css" rel="stylesheet">
+    <link href="http://alexadotlife.com/feed.atom" rel="alternate" title="alexa.life" type="application/atom+xml" /> 
+    <script type="text/javascript" src="/static/js/jquery-1.8.0.min.js"></script>
+    
+  <link rel="stylesheet" href="/static/css/tomorrow.css">
+  <script type="text/javascript" src="/static/js/prettify.js"></script>
+  <script type="text/javascript">
+    $(document).ready(function() {
+        $('pre, code').addClass("prettyprint");
+        $('pre code').removeClass("prettyprint");
+        prettyPrint();
+    });
+  </script>
+
+    
+<link rel="stylesheet" href="/static/css/pygments.css">
+
+    <style type="text/css">
+      html { min-height: 100%; position: relative; }
+      body { margin-bottom: 65px; }
+      .footer { position: absolute; bottom: 0; width: 100%; height: 65px; text-align: center; }
+      .content-title { display: none; margin-bottom: 42px; } 
+      .content { max-width: 900px; margin: 48px auto; padding: 0 40px; }
+      .site-header { float: left; left: 0; }
+      .site-navi { float: right; right: 0; }
+      .site-navi ul { list-style: none; margin: 0; padding: 0; }
+      .site-navi ul li { display: inline; margin: 0 2px; padding: 0; }
+      .site-navi ul li a { font-size: 18px; line-height: 27px; font-weight: bold; }
+      
+  .content-title { display: block; }
+  .post-title { margin-bottom: 25px; }
+
+      
+    </style>
+  </head>
+  <body>
+    <div class="content container">
+      <div class="content-title">
+        <div class="site-header">
+          <h3><a href="http://alexadotlife.com/">Alexey Vasilyev</a>'s Thoughts and Writings</h3>
+        </div><!--site-header-->
+        <div class="site-navi">
+          <ul>
+            <li><a href="/blog/">Blog</a></li>
+            <li><a href="/">About</a></li>
+          </ul>
+        </div><!--site-navi-->
+      </div><!--content-title-->
+      
+  <div class="post-title">
+    <h1>compiz headtracking</h1>
+    <i>Published: 2010, July 24</i>
+  </div><!--post-title-->
+  
+	<p>Моя цитата из твиттера: <i>собрал эту игрушку, забавно и бесполезно, но кайфа &#8211; вагон! хочу большой монитор! http://www.youtube.com/watch?v=kTNG1GN4VV8</i></p>
+
+	<p>Итак вдохновившись&#8230; Теперь о том как она ставилась</p>
+
+	<p>Хочу предупредить: у меня ubuntu 10.04, тачка домашне-девелоперская, много на ней чего стоит, так что кой-чего может и не оказаться в вашей системе. Не стоит бояться, как только проблема &#8211; сразу же внимательно читаем ошибку и ищем недостающий пакет. В общем, стоит начать с того что &#8211; обновляем систему. Главная цель &#8211; получить compiz-fusion 0.8+<br />
+Очень бодро качаем сам headtracking плагин, и смотрим на то как он не собирается.<br />
+<pre class="prettyprint lang-console">
+mkdir projects/headtrack
+cd projects/headtrack/
+git clone --depth 1 git://anongit.compiz-fusion.org/users/klange/headtracking
+cd headtracking/
+make
+</pre><br />
+Говорит что-то про bcop, быстро находим в репозитории<br />
+<pre class="prettyprint lang-console">
+apt-cache search compiz-fusion-bcop
+sudo apt-get install compiz-fusion-bcop
+</pre><br />
+Совершенно аналогичным методом разрешаем остальные зависимости.<br />
+<pre class="prettyprint lang-console">
+sudo apt-get install compiz-dev libcompizconfig0-dev libtool libtool highgui libhighgui-dev
+</pre><br />
+Примерно где-то здесь начнется проблема с opencv. ВАЖНО: не стоит искать в репозитории libcv &#8211; хотя она там и есть, но увы не заработает, очень старая сборка, проверено. Это была моя большая ошибка, не повторяйте ее. <br />
+Собираем руками последнюю версию opencv из репозитория:<br />
+<pre class="prettyprint lang-console">
+mkdir projects/opencv
+cd projects/opencv
+svn co https://opencvlibrary.svn.sourceforge.net/svnroot/opencvlibrary/tags/latest_tested_snapshot
+cd latest_tested_snapshot/opencv
+mkdir release
+cd release/
+cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local -D BUILD_PYTHON_SUPPORT=ON ..
+make
+</pre><br />
+После того как вы сварили и попили чаю собралась opencv, устанавливаем ее в систему.<br />
+<pre class="prettyprint lang-console">
+sudo make install
+sudo vim /etc/ld.so.conf.d/opencv.conf
+sudo ldconfig -v
+</pre><br />
+Теперь финально билдим headtracking и устанавливаем его в систему:<br />
+<pre class="prettyprint lang-console">
+cd projects/headtracking
+make clean
+make
+sudo make install
+</pre><br />
+Теперь идем в настройки compiz-а, жмем клавишу extraz, там headtracking. Включаем его. Окошки видоизменились. Нажимаем галку &#8211; General/Webcam head track. Теперь если веб-камера включилась и изображение поплыло в какую-то сторону, то все правильно сделано. Можно наслаждаться. Если нет и камера не включилась &#8211; что-то значит у вас не по фен-шею или чего еще, типа генетики. А скорее всего тупо web-камера не совместима с video4linux, чего и советую проверять :)<br />
+Когда у вас заболит шея (как у меня), можно поинтересоваться как это все работает. Для ленивых хинт:<br />
+<pre class="prettyprint lang-console">
+cd projects/opencv/latest_tested_snapshot/opencv/samples/c/
+chmod +x build_all.sh
+./facedetect
+</pre></p>
+
+
+    </div><!--content container-->
+    <div class="footer">
+      <div class="text-muted">
+        Copyright &copy; 2014 by Alexey Vasilyev
+
+        <div class="contacts">
+          Contact me via <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#108;&#105;&#103;&#104;&#116;&#46;&#112;&#97;&#114;&#116;&#105;&#99;&#108;&#101;&#64;&#121;&#97;&#110;&#100;&#101;&#120;&#46;&#99;&#111;&#109;">mail</a>, <a href="https://twitter.com/alexadotlife">twitter</a>, or <a href="https://github.com/alexa-infra">github</a>. More info: <a href="/">About</a>. (<a href="http://alexadotlife.com/feed.atom">feed</a>)
+        </div><!--contacts-->
+      </div>
+    </div><!--footer-->
+  </body>
+</html>
