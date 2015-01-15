@@ -21,6 +21,7 @@ EXCLUDE = [
         r"\.swp$",
         r"_[^\.]*\.html$",
         r"^requirements.txt$",
+        r"^README.md$",
 ]
 
 #URL = "http://192.168.1.68:8001/"
